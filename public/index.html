@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Benelvisio Ultimate - Plateforme de visioconférence professionnelle">
     <title>Benelvisio Ultimate - Visioconférence Professionnelle</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -39,12 +39,21 @@
             box-sizing: border-box;
         }
 
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: var(--gray-900);
             line-height: 1.6;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
         .container {
@@ -54,9 +63,10 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        /* Écran d'authentification */
+        /* Écran d'authentification - SCROLL CORRIGÉ */
         .auth-screen {
             position: fixed;
             top: 0;
@@ -69,18 +79,21 @@
             justify-content: center;
             z-index: 2000;
             padding: 20px;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .auth-container {
             display: flex;
             width: 100%;
             max-width: 1200px;
-            max-height: 90vh;
+            max-height: 95vh;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-radius: 20px;
             box-shadow: var(--shadow-xl);
             overflow: hidden;
+            min-height: 600px;
         }
 
         .auth-hero {
@@ -93,6 +106,7 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            min-height: 100%;
         }
 
         .auth-hero h1 {
@@ -131,6 +145,7 @@
             flex-direction: column;
             max-height: 100%;
             overflow: hidden;
+            position: relative;
         }
 
         .auth-form {
@@ -140,6 +155,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
+            min-height: 500px;
         }
 
         .auth-form h2 {
@@ -153,12 +169,15 @@
             margin-bottom: 30px;
         }
 
-        /* CONTENU D'INSCRIPTION AVEC SCROLL */
+        /* CONTENU D'INSCRIPTION AVEC SCROLL MOBILE */
         .register-content {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding-right: 10px;
             margin-bottom: 20px;
+            -webkit-overflow-scrolling: touch;
+            max-height: 60vh;
         }
 
         .register-content::-webkit-scrollbar {
@@ -196,8 +215,9 @@
             border-radius: 10px;
             outline: none;
             transition: all 0.3s ease;
-            font-size: 1rem;
+            font-size: 16px; /* Empêche le zoom sur iOS */
             background: white;
+            -webkit-appearance: none;
         }
 
         .form-control:focus {
@@ -218,6 +238,7 @@
             padding: 5px;
             border-radius: 5px;
             transition: all 0.3s ease;
+            z-index: 2;
         }
 
         .password-toggle:hover {
@@ -237,6 +258,8 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            -webkit-appearance: none;
+            touch-action: manipulation;
         }
 
         .btn-primary {
@@ -621,7 +644,7 @@
             font-size: 0.75rem;
         }
         
-        /* Styles critiques pour mobile */
+        /* Styles critiques pour mobile - AMÉLIORÉS */
         * {
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
@@ -631,23 +654,12 @@
             user-select: none;
         }
 
-        input, textarea {
+        input, textarea, select {
             -webkit-user-select: text;
             -moz-user-select: text;
             -ms-user-select: text;
             user-select: text;
-        }
-
-        body {
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* Empêcher le zoom sur les inputs iOS */
-        @media screen and (max-width: 768px) {
-            input, select, textarea {
-                font-size: 16px !important;
-            }
+            font-size: 16px !important; /* Empêche le zoom iOS */
         }
 
         /* Correction de la hauteur viewport mobile */
@@ -655,11 +667,15 @@
             height: 100%;
             margin: 0;
             padding: 0;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
         }
 
         .container {
             min-height: 100vh;
             min-height: -webkit-fill-available;
+            overflow: hidden;
         }
 
         /* STYLES POUR LES AUTRES ÉCRANS */
@@ -675,6 +691,8 @@
             justify-content: center;
             z-index: 1000;
             padding: 20px;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .join-form {
@@ -806,6 +824,7 @@
             grid-template-columns: 1fr 350px;
             gap: 20px;
             flex: 1;
+            overflow: hidden;
         }
 
         /* Video Grid */
@@ -817,6 +836,7 @@
             box-shadow: var(--shadow-lg);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .video-grid {
@@ -825,6 +845,8 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .video-item {
@@ -914,6 +936,7 @@
             font-size: 1.2rem;
             transition: all 0.3s ease;
             box-shadow: var(--shadow);
+            touch-action: manipulation;
         }
 
         .control-btn:hover {
@@ -1027,6 +1050,7 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            overflow: hidden;
         }
 
         /* Chat */
@@ -1039,6 +1063,7 @@
             display: flex;
             flex-direction: column;
             height: 500px;
+            overflow: hidden;
         }
 
         .chat-header {
@@ -1058,6 +1083,7 @@
             gap: 10px;
             margin-bottom: 15px;
             padding-right: 10px;
+            -webkit-overflow-scrolling: touch;
         }
 
         .message {
@@ -1099,6 +1125,7 @@
             border-radius: 25px;
             outline: none;
             transition: border-color 0.3s ease;
+            font-size: 16px;
         }
 
         .chat-input:focus {
@@ -1126,6 +1153,7 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: var(--shadow-lg);
+            overflow: hidden;
         }
 
         .participants-header {
@@ -1141,6 +1169,9 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .participant {
@@ -1178,8 +1209,53 @@
             color: var(--gray-500);
         }
 
-        /* CORRECTIONS MOBILE */
+        /* CORRECTIONS MOBILE - AMÉLIORÉES */
         @media (max-width: 768px) {
+            body {
+                position: fixed;
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+            }
+
+            .auth-screen {
+                padding: 10px;
+                align-items: flex-start;
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .auth-container {
+                flex-direction: column;
+                max-height: 90vh;
+                min-height: auto;
+                margin: 20px 0;
+            }
+
+            .auth-hero {
+                padding: 30px 20px;
+                min-height: auto;
+            }
+
+            .auth-hero h1 {
+                font-size: 2rem;
+            }
+
+            .auth-form-container {
+                padding: 30px 20px;
+                overflow: visible;
+            }
+
+            .auth-form {
+                min-height: auto;
+            }
+
+            .register-content {
+                max-height: 50vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
             .btn, .control-btn, .user-avatar {
                 min-height: 44px;
                 min-width: 44px;
@@ -1206,11 +1282,11 @@
             }
 
             input, select, textarea {
-                font-size: 16px;
+                font-size: 16px !important;
             }
 
             .container {
-                padding: 5px;
+                padding: 10px;
             }
             
             .header {
@@ -1225,6 +1301,8 @@
             
             .main-content {
                 grid-template-columns: 1fr;
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .video-grid {
@@ -1241,21 +1319,48 @@
                 height: 45px;
             }
             
-            .auth-container {
-                flex-direction: column;
-                max-height: 95vh;
+            .plans-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
             }
-            
+
+            .plan-card {
+                padding: 20px 15px;
+            }
+
+            .join-form {
+                padding: 30px 20px;
+                margin: 20px 0;
+            }
+        }
+
+        @media (max-width: 480px) {
             .auth-hero {
                 padding: 20px 15px;
             }
-            
+
+            .auth-hero h1 {
+                font-size: 1.8rem;
+            }
+
             .auth-form-container {
                 padding: 20px 15px;
             }
-            
+
             .plans-container {
-                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .plan-card {
+                padding: 15px 10px;
+            }
+
+            .registration-progress {
+                margin-bottom: 20px;
+            }
+
+            .step-label {
+                font-size: 0.7rem;
             }
         }
 
@@ -1306,6 +1411,32 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* Style pour le succès du plan gratuit */
+        .free-plan-success {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 15px;
+            border: 2px solid var(--success);
+        }
+
+        .free-plan-success i {
+            font-size: 4rem;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+
+        .free-plan-success h3 {
+            color: var(--success-dark);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .free-plan-success p {
+            color: var(--gray-600);
+            font-size: 1.1rem;
         }
     </style>
 </head>
@@ -1547,10 +1678,28 @@
                                 </div>
                             </div>
 
-                            <div id="freePlanSuccess" class="free-plan-success">
+                            <div id="freePlanSuccess" class="free-plan-success hidden">
                                 <i class="fas fa-check-circle"></i>
                                 <h3>Compte gratuit créé !</h3>
                                 <p>Votre compte Benelvisio a été créé avec succès.</p>
+                                <button id="completePayment" class="btn btn-primary mt-4">
+                                    <i class="fas fa-check"></i>
+                                    Terminer l'inscription
+                                </button>
+                            </div>
+
+                            <div id="paidPlanPayment" class="hidden">
+                                <div class="text-center mb-6">
+                                    <p class="text-gray-600">Paiement sécurisé pour la formule <span id="paymentPlanType"></span></p>
+                                </div>
+                                <!-- Ici vous pouvez ajouter l'intégration de votre solution de paiement -->
+                                <div class="bg-gray-100 p-6 rounded-lg text-center">
+                                    <p class="text-gray-600 mb-4">Intégration de paiement à configurer</p>
+                                    <button class="btn btn-outline">
+                                        <i class="fas fa-credit-card"></i>
+                                        Configurer le paiement
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1718,7 +1867,7 @@
     // CONFIGURATION NETLIFY + RAILWAY
     // =============================================
 
-    // 🔧 REMPLACE PAR TON URL RAILWAY
+    // 🔧 URL RAILWAY CORRECTE
     const API_BASE = "https://benelvisio.up.railway.app";
     
     console.log('🚀 Benelvisio - Configuration Production');
@@ -1910,7 +2059,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                },
+                    },
                 body: JSON.stringify({ 
                     fullName, 
                     email, 
@@ -2324,6 +2473,17 @@
         document.getElementById('paymentPlanPrice').textContent = 
             selectedPlan === 'basic' ? 'Gratuit' :
             selectedPlan === 'premium' ? '19,90€/mois' : '49,90€/mois';
+        
+        // Afficher l'interface appropriée selon le plan
+        if (selectedPlan === 'basic') {
+            document.getElementById('freePlanSuccess').classList.remove('hidden');
+            document.getElementById('paidPlanPayment').classList.add('hidden');
+        } else {
+            document.getElementById('freePlanSuccess').classList.add('hidden');
+            document.getElementById('paidPlanPayment').classList.remove('hidden');
+            document.getElementById('paymentPlanType').textContent = 
+                selectedPlan === 'premium' ? 'Professionnelle' : 'Entreprise';
+        }
         
         document.getElementById('planSelectionStep').classList.add('hidden');
         document.getElementById('personalInfoStep').classList.add('hidden');
