@@ -183,6 +183,49 @@
             margin-bottom: 30px;
         }
 
+        @media (max-width: 768px) {
+    .auth-features {
+        max-height: 200px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 20px;
+        padding-right: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 15px;
+    }
+
+    .auth-features::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .auth-features::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+    }
+
+    .auth-features::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+    }
+
+    .auth-features {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-features {
+        max-height: 150px;
+    }
+    
+    .auth-feature {
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+    }
+}
         /* CONTENU INSCRIPTION AVEC SCROLL MOBILE PARFAIT */
         .register-content {
             flex: 1;
