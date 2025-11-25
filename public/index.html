@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
+    <meta name="description" content="Benelvisio Ultimate - Plateforme de visioconférence professionnelle">
     <title>Benelvisio Ultimate - Visioconférence Professionnelle</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -483,83 +483,6 @@
             margin-bottom: 25px;
         }
 
-        /* TABLEAU DE COMPARAISON */
-        .plans-comparison {
-            background: var(--gray-50);
-            border-radius: 15px;
-            padding: 25px;
-            margin: 30px 0;
-            border: 1px solid var(--gray-200);
-        }
-
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .comparison-table th,
-        .comparison-table td {
-            padding: 12px 15px;
-            text-align: center;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .comparison-table th {
-            background: var(--gray-100);
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        .comparison-table .feature-name {
-            text-align: left;
-            font-weight: 500;
-            color: var(--gray-700);
-        }
-
-        .comparison-table .check {
-            color: var(--success);
-            font-weight: bold;
-        }
-
-        .comparison-table .cross {
-            color: var(--gray-400);
-        }
-
-        /* Masquer la section paiement pour le plan gratuit */
-        .payment-section {
-            transition: all 0.3s ease;
-        }
-
-        .payment-section.hidden {
-            display: none !important;
-        }
-
-        .free-plan-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .free-plan-success i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .free-plan-success h3 {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-        }
-
-        .free-plan-success p {
-            opacity: 0.9;
-            margin-bottom: 20px;
-        }
-
         /* ANIMATIONS */
         .registration-step {
             animation: fadeInUp 0.5s ease;
@@ -591,29 +514,6 @@
         .plan-card.selected {
             animation: pulse-glow 2s infinite;
             border-color: var(--primary);
-        }
-
-        /* INDICATEUR DE FORCE DU MOT DE PASSE */
-        .password-strength {
-            margin-top: 10px;
-        }
-
-        .strength-bar {
-            height: 4px;
-            background: var(--gray-200);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 5px;
-        }
-
-        .strength-progress {
-            height: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .strength-text {
-            font-size: 0.8rem;
-            font-weight: 600;
         }
 
         /* UTILITAIRES */
@@ -1087,22 +987,6 @@
             grid-column: 1 / -1;
         }
 
-        .screen-share-label {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: var(--success);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
         /* Animation pour l'enregistrement */
         @keyframes recording-pulse {
             0% { opacity: 1; }
@@ -1294,20 +1178,18 @@
             color: var(--gray-500);
         }
 
-        /* CORRECTIONS MOBILE - BOUTONS VISIBLES */
+        /* CORRECTIONS MOBILE */
         @media (max-width: 768px) {
-            .btn, .control-btn, .user-avatar, .payment-tab {
+            .btn, .control-btn, .user-avatar {
                 min-height: 44px;
                 min-width: 44px;
             }
             
-            /* Correction spécifique pour les boutons de connexion */
             .btn-primary {
                 background: var(--primary);
                 color: white;
                 border: 2px solid var(--primary);
                 font-weight: 600;
-                font-size: 1rem;
             }
             
             .btn-secondary {
@@ -1317,21 +1199,12 @@
                 font-weight: 600;
             }
             
-            .btn-outline {
-                background: transparent;
-                color: var(--gray-600);
-                border: 1px solid var(--gray-300);
-                font-weight: 500;
-            }
-            
-            /* Assurer la lisibilité */
             .btn {
                 font-weight: 600;
                 font-size: 1rem;
                 padding: 12px 16px;
             }
 
-            /* Empêcher le zoom sur les inputs */
             input, select, textarea {
                 font-size: 16px;
             }
@@ -1344,216 +1217,45 @@
                 padding: 15px;
                 flex-direction: column;
                 gap: 10px;
-                text-align: center;
             }
             
             .logo {
                 font-size: 1.2rem;
             }
             
-            .status-indicator {
-                font-size: 0.8rem;
-                padding: 6px 12px;
+            .main-content {
+                grid-template-columns: 1fr;
             }
             
-            .room-info {
-                margin-left: 0;
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-            
-            .user-avatar {
-                width: 35px;
-                height: 35px;
-                font-size: 0.9rem;
-            }
-            
-            .user-dropdown {
-                min-width: 180px;
-                right: -50px;
-            }
-            
-            /* Video Grid mobile */
             .video-grid {
                 grid-template-columns: 1fr;
-                gap: 10px;
-                margin-bottom: 15px;
             }
             
-            .video-item {
-                min-height: 200px;
-            }
-            
-            .screen-share-container {
-                min-height: 250px;
-            }
-            
-            /* Controls mobile */
             .controls {
                 padding: 10px;
                 gap: 8px;
-                flex-wrap: wrap;
-                justify-content: center;
             }
             
             .control-btn {
                 width: 45px;
                 height: 45px;
-                font-size: 1.1rem;
             }
             
-            /* Chat mobile */
-            .chat-container {
-                height: 300px;
-                padding: 15px;
-            }
-            
-            .chat-messages {
-                max-height: 200px;
-            }
-            
-            .chat-input-container {
-                flex-direction: column;
-                gap: 8px;
-            }
-            
-            .chat-input {
-                padding: 10px 12px;
-                font-size: 0.9rem;
-            }
-            
-            .send-btn {
-                padding: 10px 15px;
-                font-size: 0.9rem;
-            }
-            
-            /* Participants mobile */
-            .participants-container {
-                padding: 15px;
-            }
-            
-            .participant {
-                padding: 8px;
-            }
-            
-            .participant-avatar {
-                width: 35px;
-                height: 35px;
-                font-size: 0.9rem;
-            }
-            
-            /* Auth screens mobile */
             .auth-container {
                 flex-direction: column;
                 max-height: 95vh;
-                margin: 10px;
             }
             
             .auth-hero {
                 padding: 20px 15px;
             }
             
-            .auth-hero h1 {
-                font-size: 2rem;
-            }
-            
             .auth-form-container {
                 padding: 20px 15px;
             }
             
-            .auth-form {
-                max-width: 100%;
-            }
-            
-            /* Join screen mobile */
-            .join-form {
-                padding: 25px 20px;
-                margin: 10px;
-                max-width: 90%;
-            }
-            
-            /* Registration mobile */
             .plans-container {
                 grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            
-            .plan-card {
-                padding: 20px 15px;
-            }
-            
-            .registration-progress {
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-            
-            .progress-step {
-                flex: 1;
-                min-width: 70px;
-            }
-            
-            .step-label {
-                font-size: 0.7rem;
-            }
-            
-            /* Recording indicator mobile */
-            .recording-indicator {
-                top: 10px;
-                padding: 8px 15px;
-                font-size: 0.8rem;
-            }
-            
-            .recording-timer {
-                font-size: 0.8rem;
-            }
-
-            /* Correction du bouton œil sur mobile */
-            .password-toggle {
-                right: 12px;
-                top: 42px;
-                padding: 8px;
-            }
-        }
-
-        /* Très petits écrans */
-        @media (max-width: 480px) {
-            .container {
-                padding: 2px;
-            }
-            
-            .header {
-                padding: 10px;
-            }
-            
-            .logo span:last-child {
-                display: none;
-            }
-            
-            .controls {
-                gap: 5px;
-            }
-            
-            .control-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1rem;
-            }
-            
-            .video-grid {
-                gap: 5px;
-            }
-            
-            .video-item {
-                min-height: 180px;
-            }
-            
-            .auth-hero h1 {
-                font-size: 1.8rem;
-            }
-            
-            .join-form {
-                padding: 20px 15px;
             }
         }
 
@@ -1567,108 +1269,6 @@
             animation: fadeIn 0.5s ease;
         }
 
-        /* Scrollbar pour tous les éléments */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--gray-200);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 3px;
-        }
-
-        /* Classes CSS manquantes pour les couleurs */
-        .bg-red-500 { background-color: #ef4444; }
-        .bg-yellow-500 { background-color: #f59e0b; }
-        .bg-blue-500 { background-color: #3b82f6; }
-        .bg-green-500 { background-color: #10b981; }
-        .text-red-500 { color: #ef4444; }
-        .text-yellow-500 { color: #f59e0b; }
-        .text-blue-500 { color: #3b82f6; }
-        .text-green-500 { color: #10b981; }
-        .bg-yellow-50 { background-color: #fffbeb; }
-        .text-yellow-800 { color: #92400e; }
-
-        /* Classes de largeur pour la barre de force du mot de passe */
-        .w-1\/4 { width: 25%; }
-        .w-2\/4 { width: 50%; }
-        .w-3\/4 { width: 75%; }
-        .w-full { width: 100%; }
-
-        /* CORRECTIONS AJOUTÉES : */
-
-        /* Scroll pour les modaux sur mobile */
-        @media (max-width: 768px) {
-            .auth-container {
-                max-height: 85vh !important;
-                overflow: hidden;
-                margin: 20px 10px;
-            }
-
-            .auth-form-container {
-                overflow-y: auto;
-                max-height: 100%;
-                padding: 20px 15px;
-            }
-
-            .register-content {
-                max-height: 50vh;
-                overflow-y: auto;
-            }
-
-            .join-form {
-                max-height: 80vh;
-                overflow-y: auto;
-                margin: 20px 10px;
-            }
-
-            /* Assurer que les boutons sont toujours visibles */
-            .auth-form .btn {
-                position: sticky;
-                bottom: 0;
-                background: white;
-                padding: 15px;
-                margin-top: 10px;
-                z-index: 10;
-            }
-        }
-
-        /* Amélioration du scroll */
-        .auth-form-container::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .auth-form-container::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 2px;
-        }
-
-        /* Correction pour les très petits écrans */
-        @media (max-height: 700px) {
-            .auth-hero {
-                padding: 15px 10px;
-            }
-            
-            .auth-hero h1 {
-                font-size: 1.5rem;
-                margin-bottom: 10px;
-            }
-            
-            .auth-features {
-                margin-top: 15px;
-            }
-            
-            .auth-feature {
-                margin-bottom: 8px;
-                font-size: 0.8rem;
-            }
-        }
-
         /* Indicateur de temps restant */
         .time-limit-indicator {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
@@ -1678,7 +1278,6 @@
             margin-bottom: 20px;
             text-align: center;
             font-weight: 600;
-            box-shadow: var(--shadow);
         }
 
         .time-limit-indicator.warning {
@@ -1691,6 +1290,22 @@
             font-size: 1.2rem;
             font-weight: bold;
             margin: 5px 0;
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -1921,7 +1536,7 @@
                         
                         <!-- Étape 3: Paiement -->
                         <div id="paymentStep" class="registration-step hidden">
-                            <h3 class="text-center mb-4" id="paymentStepTitle">Paiement sécurisé</h3>
+                            <h3 class="text-center mb-4" id="paymentStepTitle">Finalisation</h3>
                             
                             <div class="selected-plan-banner mb-6">
                                 <div class="flex items-center justify-between">
@@ -1932,68 +1547,10 @@
                                 </div>
                             </div>
 
-                            <!-- Section pour le plan gratuit -->
-                            <div id="freePlanSuccess" class="free-plan-success hidden">
+                            <div id="freePlanSuccess" class="free-plan-success">
                                 <i class="fas fa-check-circle"></i>
                                 <h3>Compte gratuit créé !</h3>
                                 <p>Votre compte Benelvisio a été créé avec succès.</p>
-                            </div>
-                            
-                            <!-- Section paiement -->
-                            <div id="paymentSection" class="payment-section">
-                                <div class="payment-methods mb-4">
-                                    <div class="flex gap-2 mb-3">
-                                        <button class="payment-tab btn btn-outline flex-1 active" data-method="card">
-                                            <i class="fas fa-credit-card"></i>
-                                            Carte
-                                        </button>
-                                        <button class="payment-tab btn btn-outline flex-1" data-method="transfer">
-                                            <i class="fas fa-university"></i>
-                                            Virement
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Carte bancaire -->
-                                    <div id="cardPayment" class="payment-method-form">
-                                        <div class="form-group">
-                                            <label for="cardNumber">Numéro de carte</label>
-                                            <input type="text" id="cardNumber" class="form-control" placeholder="1234 5678 9012 3456" maxlength="19">
-                                        </div>
-                                        
-                                        <div class="flex gap-3">
-                                            <div class="form-group flex-1">
-                                                <label for="expiryDate">Date d'expiration</label>
-                                                <input type="text" id="expiryDate" class="form-control" placeholder="MM/AA" maxlength="5">
-                                            </div>
-                                            
-                                            <div class="form-group flex-1">
-                                                <label for="cvv">CVV</label>
-                                                <input type="text" id="cvv" class="form-control" placeholder="123" maxlength="3">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Virement bancaire -->
-                                    <div id="transferPayment" class="payment-method-form hidden">
-                                        <div class="bg-yellow-50 p-3 rounded-lg mb-3">
-                                            <p class="text-sm text-yellow-800">
-                                                <i class="fas fa-info-circle mr-1"></i>
-                                                Après l'inscription, vous recevrez les coordonnées bancaires.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex gap-3">
-                                    <button id="backToInfo" class="btn btn-secondary flex-1">
-                                        <i class="fas fa-arrow-left"></i>
-                                        Retour
-                                    </button>
-                                    <button id="completePayment" class="btn btn-primary flex-1">
-                                        <i class="fas fa-lock"></i>
-                                        Finaliser
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -2151,19 +1708,23 @@
         <div style="text-align: center; padding: 20px;">
             <h1 style="font-size: 2rem; margin-bottom: 20px;">🎬 Benelvisio Ultimate</h1>
             <div style="font-size: 1.2rem; margin-bottom: 30px;">Chargement de l'application...</div>
-            <div id="loadingProgress" style="width: 200px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden;">
-                <div id="loadingBar" style="width: 0%; height: 100%; background: white; transition: width 0.3s ease;"></div>
-            </div>
+            <div class="loader"></div>
             <div id="loadingStatus" style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">Initialisation...</div>
         </div>
     </div>
 
     <script>
     // =============================================
-    // CODE RÉEL AVEC BASE DE DONNÉES
+    // CONFIGURATION NETLIFY + RAILWAY
     // =============================================
 
-    const API_BASE = window.location.origin;
+    // 🔧 REMPLACE PAR TON URL RAILWAY
+    const API_BASE = "https://benelvisio.up.railway.app";
+    
+    console.log('🚀 Benelvisio - Configuration Production');
+    console.log('🌐 Backend URL:', API_BASE);
+    console.log('📍 Frontend URL:', window.location.origin);
+
     let authToken = localStorage.getItem('authToken');
     let currentUser = null;
 
@@ -2189,11 +1750,11 @@
 
     // Timer pour la limite de temps
     let timeLimitTimer = null;
-    let remainingTime = 40 * 60; // 40 minutes en secondes
+    let remainingTime = 40 * 60;
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Application Benelvisio MODE RÉEL démarrée');
+        console.log('🚀 Application Benelvisio démarrée');
         initializeApp();
     });
 
@@ -2218,12 +1779,7 @@
 
     function updateLoadingStatus(message) {
         const statusElement = document.getElementById('loadingStatus');
-        const progressBar = document.getElementById('loadingBar');
         if (statusElement) statusElement.textContent = message;
-        if (progressBar) {
-            const progress = Math.min(100, (parseInt(progressBar.style.width.replace('%', '')) || 0) + 25);
-            progressBar.style.width = progress + '%';
-        }
     }
 
     function hideLoadingScreen() {
@@ -2261,17 +1817,8 @@
         
         document.getElementById('continueToPayment').addEventListener('click', showPaymentStep);
         document.getElementById('backToPlans').addEventListener('click', showPlanSelection);
-        document.getElementById('backToInfo').addEventListener('click', showPersonalInfoStep);
         document.getElementById('completePayment').addEventListener('click', handleRegistration);
         document.getElementById('changePlan').addEventListener('click', showPlanSelection);
-
-        // Méthodes de paiement
-        document.querySelectorAll('.payment-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const method = e.target.closest('button').dataset.method;
-                switchPaymentMethod(method);
-            });
-        });
 
         // Réunions
         document.getElementById('joinBtn').addEventListener('click', joinMeeting);
@@ -2375,18 +1922,14 @@
             const data = await response.json();
             
             if (data.success) {
-                if (data.requiresPayment && selectedPlan !== 'basic') {
-                    showPaymentStep();
-                } else {
-                    authToken = data.token;
-                    currentUser = data.user;
-                    
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('userData', JSON.stringify(currentUser));
-                    
-                    alert('🎉 Compte créé avec succès !');
-                    showJoinScreen();
-                }
+                authToken = data.token;
+                currentUser = data.user;
+                
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('userData', JSON.stringify(currentUser));
+                
+                alert('🎉 Compte créé avec succès !');
+                showJoinScreen();
             } else {
                 alert('❌ ' + data.error);
             }
@@ -2546,14 +2089,15 @@
 
     // Socket.io pour la communication en temps réel
     function initializeSocket() {
-        console.log('🔌 Connexion au serveur Socket.io...');
+        console.log('🔌 Connexion au backend Railway...');
         
         socket = io(API_BASE, {
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            timeout: 10000
         });
 
         socket.on('connect', () => {
-            console.log('✅ Connecté au serveur Socket.io, ID:', socket.id);
+            console.log('✅ Connecté au backend Railway');
             updateConnectionStatus('online');
             
             userData.socketId = socket.id;
@@ -2583,17 +2127,12 @@
             console.log('👤 Utilisateur rejoint:', data.userData.name);
             logMessage('👤 ' + data.userData.name + ' a rejoint la réunion');
             addParticipant(data.userId, data.userData);
-            
-            if (data.userId !== socket.id) {
-                createPeerConnection(data.userId, data.userData, true);
-            }
         });
 
         socket.on('user-left', (data) => {
             console.log('👋 Utilisateur parti:', data.userData.name);
             logMessage('👋 ' + data.userData.name + ' a quitté la réunion');
             removeParticipant(data.userId);
-            removePeerConnection(data.userId);
         });
 
         socket.on('existing-users', (users) => {
@@ -2601,39 +2140,10 @@
             users.forEach(user => {
                 if (user.userId !== socket.id) {
                     addParticipant(user.userId, user.userData);
-                    createPeerConnection(user.userId, user.userData, false);
                 }
             });
-            updateParticipantCount(users.length);
         });
 
-        socket.on('users-updated', (users) => {
-            updateParticipantCount(users.length);
-        });
-
-        // Signalisation WebRTC
-        socket.on('webrtc-offer', (data) => {
-            console.log('📨 Offre WebRTC reçue de:', data.from);
-            handleOffer(data.from, data.offer);
-        });
-
-        socket.on('webrtc-answer', (data) => {
-            console.log('📨 Réponse WebRTC reçue de:', data.from);
-            handleAnswer(data.from, data.answer);
-        });
-
-        socket.on('webrtc-ice-candidate', (data) => {
-            console.log('🧊 Candidat ICE reçu de:', data.from);
-            handleIceCandidate(data.from, data.candidate);
-        });
-
-        // Chat en temps réel
-        socket.on('chat-message', (data) => {
-            console.log('💬 Message reçu:', data);
-            addChatMessage(data.userName, data.message, data.userId, false);
-        });
-
-        // Gestion du temps limite
         socket.on('time-limit-info', (data) => {
             console.log('⏰ Info limite temps:', data);
             showTimeLimitIndicator(data.remaining);
@@ -2650,15 +2160,10 @@
             leaveMeeting();
         });
 
-        socket.on('remaining-time-update', (data) => {
-            if (data.hasLimit) {
-                showTimeLimitIndicator(data.remaining);
-            }
-        });
-
-        socket.on('room-error', (data) => {
-            alert('Erreur: ' + data.message);
-            showJoinScreen();
+        // Chat en temps réel
+        socket.on('chat-message', (data) => {
+            console.log('💬 Message reçu:', data);
+            addChatMessage(data.userName, data.message, data.userId, false);
         });
     }
 
@@ -2674,20 +2179,13 @@
                 remainingTime--;
                 updateTimeDisplay(timeRemainingElement, remainingTime);
                 
-                // Avertissement à 5 minutes
                 if (remainingTime === 5 * 60) {
                     timeLimitIndicator.classList.add('warning');
-                    logMessage('⚠️ Attention: Il reste 5 minutes avant la fin de la réunion (Formule Basique)');
-                }
-                
-                // Avertissement à 1 minute
-                if (remainingTime === 60) {
-                    logMessage('⏰ Dernière minute! La réunion se terminera bientôt.');
+                    logMessage('⚠️ Attention: Il reste 5 minutes avant la fin de la réunion');
                 }
             } else {
                 clearInterval(timeLimitTimer);
                 timeLimitIndicator.innerHTML = '<div>⏰ Temps écoulé</div><div>La réunion est terminée</div>';
-                timeLimitIndicator.classList.add('warning');
             }
         }, 1000);
     }
@@ -2713,8 +2211,66 @@
         document.getElementById('timeLimitIndicator').classList.add('hidden');
     }
 
-    // ... (le reste du code WebRTC, gestion des médias, chat, etc. reste identique à la version précédente)
-    // Pour gagner de l'espace, je ne répète pas tout le code WebRTC qui est déjà fonctionnel
+    // Fonctions de base (abrégées pour la lisibilité)
+    function updateConnectionStatus(status) {
+        const statusElement = document.getElementById('connectionStatus');
+        const statusText = statusElement.querySelector('.status-text');
+        
+        statusElement.className = `status-indicator status-${status}`;
+        statusText.textContent = 
+            status === 'online' ? 'En ligne' :
+            status === 'offline' ? 'Hors ligne' : 'Connexion...';
+    }
+
+    function updateRoomInfo() {
+        if (currentRoom) {
+            document.getElementById('currentRoomCode').textContent = currentRoom;
+        }
+    }
+
+    function updateUserInterface() {
+        if (currentUser) {
+            document.getElementById('userFullName').textContent = currentUser.full_name;
+            document.getElementById('userPlan').textContent = `Formule ${currentUser.plan_type === 'basic' ? 'Basique' : currentUser.plan_type === 'premium' ? 'Professionnelle' : 'Entreprise'}`;
+            document.getElementById('userAvatar').textContent = currentUser.full_name.charAt(0).toUpperCase();
+        }
+    }
+
+    function leaveMeeting() {
+        if (confirm('Voulez-vous vraiment quitter la réunion ?')) {
+            stopTimeLimitCounter();
+            
+            if (isRecording) stopRecording();
+            if (isSharingScreen) stopScreenShare();
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (socket) {
+                socket.emit('leave-room', {
+                    roomId: currentRoom,
+                    userData: userData
+                });
+                socket.disconnect();
+                socket = null;
+            }
+            
+            currentRoom = null;
+            userData = null;
+            showJoinScreen();
+        }
+    }
+
+    function logout() {
+        if (currentRoom) leaveMeeting();
+        
+        currentUser = null;
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        showAuthScreen();
+    }
 
     // Gestion de l'inscription
     let selectedPlan = null;
@@ -2773,14 +2329,6 @@
         document.getElementById('personalInfoStep').classList.add('hidden');
         document.getElementById('paymentStep').classList.remove('hidden');
         updateProgress(3);
-        
-        if (selectedPlan === 'basic') {
-            document.getElementById('paymentSection').classList.add('hidden');
-            document.getElementById('freePlanSuccess').classList.remove('hidden');
-        } else {
-            document.getElementById('paymentSection').classList.remove('hidden');
-            document.getElementById('freePlanSuccess').classList.add('hidden');
-        }
     }
 
     function updateProgress(step) {
@@ -2797,85 +2345,181 @@
         });
     }
 
-    function switchPaymentMethod(method) {
-        document.querySelectorAll('.payment-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.method === method);
-        });
-        
-        document.getElementById('cardPayment').classList.toggle('hidden', method !== 'card');
-        document.getElementById('transferPayment').classList.toggle('hidden', method !== 'transfer');
+    // Fonctions de base pour l'interface
+    function logMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const logElement = document.createElement('div');
+        logElement.style.cssText = 'color: #666; font-size: 0.8rem; padding: 5px 10px; border-left: 3px solid #667eea; background: #f8f9fa; margin: 5px 0; border-radius: 0 5px 5px 0;';
+        logElement.textContent = message;
+        chatMessages.appendChild(logElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Fonctions utilitaires (abrégées pour gagner de l'espace)
-    function updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connectionStatus');
-        const statusText = statusElement.querySelector('.status-text');
+    function addChatMessage(userName, message, userId, isOwn) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
         
-        statusElement.className = `status-indicator status-${status}`;
-        statusText.textContent = 
-            status === 'online' ? 'En ligne' :
-            status === 'offline' ? 'Hors ligne' : 'Connexion...';
+        messageDiv.innerHTML = `
+            <div class="message-header">${userName}</div>
+            <div>${message}</div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function updateRoomInfo() {
-        if (currentRoom) {
-            document.getElementById('currentRoomCode').textContent = currentRoom;
+    function addParticipant(userId, userData) {
+        const participantsList = document.getElementById('participantsList');
+        
+        if (document.getElementById(`participant-${userId}`)) return;
+        
+        const participant = document.createElement('div');
+        participant.className = 'participant';
+        participant.id = `participant-${userId}`;
+        
+        participant.innerHTML = `
+            <div class="participant-avatar">${userData.name.charAt(0).toUpperCase()}</div>
+            <div class="participant-info">
+                <div class="participant-name">${userData.name}</div>
+                <div class="participant-role">${userData.isHost ? 'Hôte' : 'Participant'}</div>
+            </div>
+        `;
+        
+        participantsList.appendChild(participant);
+        updateParticipantsCount();
+    }
+
+    function removeParticipant(userId) {
+        const participant = document.getElementById(`participant-${userId}`);
+        if (participant) participant.remove();
+        updateParticipantsCount();
+    }
+
+    function updateParticipantsList() {
+        const participantsList = document.getElementById('participantsList');
+        participantsList.innerHTML = '';
+        
+        if (userData) {
+            const participant = document.createElement('div');
+            participant.className = 'participant';
+            participant.innerHTML = `
+                <div class="participant-avatar">${userData.name.charAt(0).toUpperCase()}</div>
+                <div class="participant-info">
+                    <div class="participant-name">${userData.name} (Vous)</div>
+                    <div class="participant-role">${userData.isHost ? 'Hôte' : 'Participant'}</div>
+                </div>
+            `;
+            participantsList.appendChild(participant);
         }
     }
 
-    function updateUserInterface() {
-        if (currentUser) {
-            document.getElementById('userFullName').textContent = currentUser.full_name;
-            document.getElementById('userPlan').textContent = `Formule ${currentUser.plan_type === 'basic' ? 'Basique' : currentUser.plan_type === 'premium' ? 'Professionnelle' : 'Entreprise'}`;
-            document.getElementById('userAvatar').textContent = currentUser.full_name.charAt(0).toUpperCase();
-        }
+    function updateParticipantsCount() {
+        const participantsList = document.getElementById('participantsList');
+        const count = participantsList.children.length;
+        document.getElementById('participantsCount').textContent = count;
+        document.getElementById('participantCount').textContent = count;
     }
 
-    function leaveMeeting() {
-        if (confirm('Voulez-vous vraiment quitter la réunion ?')) {
-            stopTimeLimitCounter();
-            
-            if (isRecording) stopRecording();
-            if (isSharingScreen) stopScreenShare();
-            
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-            
-            // Fermer toutes les connexions WebRTC
-            peers.forEach((peerData, userId) => {
-                peerData.connection.close();
+    // Fonctions médias (simplifiées pour l'exemple)
+    async function initializeMedia() {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720 },
+                audio: true
             });
-            peers.clear();
-            
-            // Déconnecter le socket
-            if (socket) {
-                socket.emit('leave-room', {
-                    roomId: currentRoom,
-                    userData: userData
-                });
-                socket.disconnect();
-                socket = null;
-            }
-            
-            currentRoom = null;
-            userData = null;
-            showJoinScreen();
+            console.log('✅ Médias initialisés');
+        } catch (error) {
+            console.error('❌ Erreur médias:', error);
         }
     }
 
-    function logout() {
-        if (currentRoom) leaveMeeting();
+    function addLocalVideo() {
+        const videoGrid = document.getElementById('videoGrid');
+        videoGrid.innerHTML = '';
         
-        currentUser = null;
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-        showAuthScreen();
+        const videoItem = document.createElement('div');
+        videoItem.className = 'video-item self';
+        videoItem.id = 'localVideo';
+        videoItem.innerHTML = `
+            <video autoplay muted playsinline></video>
+            <div class="video-overlay">
+                <span class="user-name">${userData.name} (Vous)</span>
+                <span class="user-badge">${userData.isHost ? 'Hôte' : 'Participant'}</span>
+            </div>
+        `;
+        
+        const videoElement = videoItem.querySelector('video');
+        if (localStream) {
+            videoElement.srcObject = localStream;
+        }
+        
+        videoGrid.appendChild(videoItem);
     }
 
-    // Les fonctions WebRTC, gestion des médias, etc. restent identiques à la version précédente
-    // Elles sont déjà fonctionnelles donc pas besoin de les modifier
+    function toggleAudio() {
+        if (localStream) {
+            const audioTracks = localStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                isAudioMuted = !isAudioMuted;
+                audioTracks[0].enabled = !isAudioMuted;
+                
+                const muteBtn = document.getElementById('muteBtn');
+                if (isAudioMuted) {
+                    muteBtn.classList.add('muted');
+                    muteBtn.innerHTML = '🔇';
+                } else {
+                    muteBtn.classList.remove('muted');
+                    muteBtn.innerHTML = '🎤';
+                }
+            }
+        }
+    }
+
+    function toggleVideo() {
+        if (localStream) {
+            const videoTracks = localStream.getVideoTracks();
+            if (videoTracks.length > 0) {
+                isVideoOff = !isVideoOff;
+                videoTracks[0].enabled = !isVideoOff;
+                
+                const videoBtn = document.getElementById('videoBtn');
+                if (isVideoOff) {
+                    videoBtn.classList.add('off');
+                    videoBtn.innerHTML = '📷';
+                } else {
+                    videoBtn.classList.remove('off');
+                    videoBtn.innerHTML = '📹';
+                }
+            }
+        }
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('chatInput');
+        const message = messageInput.value.trim();
+        
+        if (message && socket) {
+            socket.emit('chat-message', {
+                roomId: currentRoom,
+                message: message,
+                userName: userData.name,
+                userId: socket.id
+            });
+            
+            addChatMessage(userData.name, message, socket.id, true);
+            messageInput.value = '';
+        }
+    }
+
+    // Fonctions de démo (à implémenter complètement)
+    function toggleRecording() {
+        alert('Fonctionnalité d\'enregistrement à implémenter');
+    }
+
+    function toggleScreenShare() {
+        alert('Fonctionnalité de partage d\'écran à implémenter');
+    }
 
     </script>
 </body>
