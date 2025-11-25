@@ -54,6 +54,20 @@
             position: fixed;
             width: 100%;
             height: 100%;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        input, textarea, select {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+            font-size: 16px !important;
         }
 
         .container {
@@ -66,7 +80,7 @@
             overflow: hidden;
         }
 
-        /* Écran d'authentification - SCROLL CORRIGÉ */
+        /* ÉCRAN AUTHENTIFICATION - CORRECTIONS MOBILE */
         .auth-screen {
             position: fixed;
             top: 0;
@@ -78,7 +92,7 @@
             align-items: center;
             justify-content: center;
             z-index: 2000;
-            padding: 20px;
+            padding: 15px;
             overflow: auto;
             -webkit-overflow-scrolling: touch;
         }
@@ -169,7 +183,7 @@
             margin-bottom: 30px;
         }
 
-        /* CONTENU D'INSCRIPTION AVEC SCROLL MOBILE */
+        /* CONTENU INSCRIPTION AVEC SCROLL MOBILE PARFAIT */
         .register-content {
             flex: 1;
             overflow-y: auto;
@@ -177,7 +191,9 @@
             padding-right: 10px;
             margin-bottom: 20px;
             -webkit-overflow-scrolling: touch;
-            max-height: 60vh;
+            max-height: 400px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--gray-200);
         }
 
         .register-content::-webkit-scrollbar {
@@ -210,14 +226,15 @@
 
         .form-control {
             width: 100%;
-            padding: 12px 45px 12px 15px;
+            padding: 15px 50px 15px 15px;
             border: 2px solid var(--gray-200);
             border-radius: 10px;
             outline: none;
             transition: all 0.3s ease;
-            font-size: 16px; /* Empêche le zoom sur iOS */
+            font-size: 16px;
             background: white;
             -webkit-appearance: none;
+            height: 52px;
         }
 
         .form-control:focus {
@@ -225,20 +242,26 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        /* BOUTON ŒIL PASSWORD */
+        /* BOUTON ŒIL PASSWORD PARFAITEMENT ALIGNÉ */
         .password-toggle {
             position: absolute;
-            right: 15px;
-            top: 38px;
+            right: 12px;
+            top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: var(--gray-500);
             cursor: pointer;
-            padding: 5px;
+            padding: 10px;
             border-radius: 5px;
             transition: all 0.3s ease;
             z-index: 2;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
         }
 
         .password-toggle:hover {
@@ -247,7 +270,7 @@
         }
 
         .btn {
-            padding: 15px 20px;
+            padding: 16px 20px;
             border: none;
             border-radius: 10px;
             font-size: 1rem;
@@ -260,6 +283,7 @@
             gap: 8px;
             -webkit-appearance: none;
             touch-action: manipulation;
+            min-height: 52px;
         }
 
         .btn-primary {
@@ -298,8 +322,9 @@
         }
 
         .btn-sm {
-            padding: 10px 15px;
+            padding: 12px 16px;
             font-size: 0.9rem;
+            min-height: 44px;
         }
 
         .auth-switch {
@@ -319,7 +344,7 @@
             text-decoration: underline;
         }
 
-        /* INDICATEUR DE PROGRESSION */
+        /* PROGRESSION INSCRIPTION */
         .registration-progress {
             display: flex;
             justify-content: space-between;
@@ -379,7 +404,7 @@
             background: var(--success);
         }
 
-        /* FORMULES D'ABONNEMENT */
+        /* FORMULES ABONNEMENT */
         .plans-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -497,7 +522,6 @@
             margin-top: auto;
         }
 
-        /* BANNIÈRE DE FORMULE SÉLECTIONNÉE */
         .selected-plan-banner {
             background: rgba(102, 126, 234, 0.1);
             border-radius: 10px;
@@ -643,42 +667,8 @@
         .text-xs {
             font-size: 0.75rem;
         }
-        
-        /* Styles critiques pour mobile - AMÉLIORÉS */
-        * {
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
 
-        input, textarea, select {
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            user-select: text;
-            font-size: 16px !important; /* Empêche le zoom iOS */
-        }
-
-        /* Correction de la hauteur viewport mobile */
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-        }
-
-        .container {
-            min-height: 100vh;
-            min-height: -webkit-fill-available;
-            overflow: hidden;
-        }
-
-        /* STYLES POUR LES AUTRES ÉCRANS */
+        /* ÉCRAN REJOINDRE */
         .join-screen {
             position: fixed;
             top: 0;
@@ -716,7 +706,7 @@
             margin-bottom: 30px;
         }
 
-        /* Header et interface principale */
+        /* INTERFACE PRINCIPALE */
         .header {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -763,6 +753,28 @@
             color: white; 
         }
 
+        .time-limit-indicator {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .time-limit-indicator.warning {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            animation: pulse 1s infinite;
+        }
+
+        .time-remaining {
+            font-family: monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
         .room-info {
             display: flex;
             align-items: center;
@@ -775,8 +787,8 @@
         }
 
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: var(--primary);
             display: flex;
@@ -806,19 +818,19 @@
         }
 
         .user-dropdown-item {
-            padding: 10px 20px;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
             cursor: pointer;
             transition: background 0.2s ease;
+            min-height: 44px;
         }
 
         .user-dropdown-item:hover {
             background: var(--gray-100);
         }
 
-        /* Main Layout */
         .main-content {
             display: grid;
             grid-template-columns: 1fr 350px;
@@ -827,7 +839,6 @@
             overflow: hidden;
         }
 
-        /* Video Grid */
         .video-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -863,11 +874,6 @@
             border-color: var(--primary);
         }
 
-        .video-item.screen-share-container {
-            border-color: var(--success);
-            border-width: 4px;
-        }
-
         .video-item video {
             width: 100%;
             height: 100%;
@@ -901,20 +907,6 @@
             font-weight: 500;
         }
 
-        .screen-share-label {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: var(--success);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            z-index: 10;
-        }
-
-        /* Controls */
         .controls {
             display: flex;
             justify-content: center;
@@ -925,8 +917,8 @@
         }
 
         .control-btn {
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             border: none;
             border-radius: 50%;
             display: flex;
@@ -944,49 +936,17 @@
             box-shadow: var(--shadow-lg);
         }
 
-        .btn-mute { 
-            background: var(--gray-200); 
-            color: var(--gray-700); 
-        }
-        .btn-mute.muted { 
-            background: var(--danger); 
-            color: white; 
-        }
-        .btn-video { 
-            background: var(--gray-200); 
-            color: var(--gray-700); 
-        }
-        .btn-video.off { 
-            background: var(--danger); 
-            color: white; 
-        }
-        .btn-record { 
-            background: var(--gray-200); 
-            color: var(--gray-700); 
-        }
-        .btn-record.recording { 
-            background: var(--danger); 
-            color: white; 
-            animation: pulse 1.5s infinite;
-        }
-        .btn-screen { 
-            background: var(--gray-200); 
-            color: var(--gray-700); 
-        }
-        .btn-screen.active { 
-            background: var(--success); 
-            color: white; 
-        }
-        .btn-call { 
-            background: var(--success); 
-            color: white; 
-        }
-        .btn-call.end { 
-            background: var(--danger); 
-            color: white; 
-        }
+        .btn-mute { background: var(--gray-200); color: var(--gray-700); }
+        .btn-mute.muted { background: var(--danger); color: white; }
+        .btn-video { background: var(--gray-200); color: var(--gray-700); }
+        .btn-video.off { background: var(--danger); color: white; }
+        .btn-record { background: var(--gray-200); color: var(--gray-700); }
+        .btn-record.recording { background: var(--danger); color: white; animation: pulse 1.5s infinite; }
+        .btn-screen { background: var(--gray-200); color: var(--gray-700); }
+        .btn-screen.active { background: var(--success); color: white; }
+        .btn-call { background: var(--success); color: white; }
+        .btn-call.end { background: var(--danger); color: white; }
 
-        /* Indicateur d'enregistrement */
         .recording-indicator {
             position: fixed;
             top: 20px;
@@ -994,7 +954,7 @@
             transform: translateX(-50%);
             background: var(--danger);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 25px;
             display: flex;
             align-items: center;
@@ -1003,49 +963,9 @@
             font-weight: 600;
             z-index: 1000;
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-        }
-        
-        .screen-share-container {
-            border: 3px solid var(--success) !important;
-            grid-column: 1 / -1;
+            min-height: 44px;
         }
 
-        /* Animation pour l'enregistrement */
-        @keyframes recording-pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .recording-indicator {
-            animation: recording-pulse 1s infinite;
-        }
-
-        .recording-dot {
-            width: 12px;
-            height: 12px;
-            background: white;
-            border-radius: 50%;
-            animation: blink 1s infinite;
-        }
-
-        .recording-timer {
-            font-family: monospace;
-            font-weight: bold;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        /* Sidebar */
         .sidebar {
             display: flex;
             flex-direction: column;
@@ -1053,7 +973,6 @@
             overflow: hidden;
         }
 
-        /* Chat */
         .chat-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -1087,7 +1006,7 @@
         }
 
         .message {
-            padding: 10px 15px;
+            padding: 12px 15px;
             border-radius: 15px;
             max-width: 80%;
             word-wrap: break-word;
@@ -1126,6 +1045,7 @@
             outline: none;
             transition: border-color 0.3s ease;
             font-size: 16px;
+            min-height: 44px;
         }
 
         .chat-input:focus {
@@ -1140,13 +1060,13 @@
             border-radius: 25px;
             cursor: pointer;
             transition: background 0.3s ease;
+            min-height: 44px;
         }
 
         .send-btn:hover {
             background: var(--primary-dark);
         }
 
-        /* Participants */
         .participants-container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -1178,9 +1098,10 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px;
+            padding: 12px;
             background: var(--gray-100);
             border-radius: 10px;
+            min-height: 44px;
         }
 
         .participant-avatar {
@@ -1209,7 +1130,62 @@
             color: var(--gray-500);
         }
 
-        /* CORRECTIONS MOBILE - AMÉLIORÉES */
+        .free-plan-success {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 15px;
+            border: 2px solid var(--success);
+        }
+
+        .free-plan-success i {
+            font-size: 4rem;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+
+        .free-plan-success h3 {
+            color: var(--success-dark);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .free-plan-success p {
+            color: var(--gray-600);
+            font-size: 1.1rem;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* CORRECTIONS MOBILE COMPLÈTES */
         @media (max-width: 768px) {
             body {
                 position: fixed;
@@ -1229,12 +1205,13 @@
                 flex-direction: column;
                 max-height: 90vh;
                 min-height: auto;
-                margin: 20px 0;
+                margin: 10px 0;
             }
 
             .auth-hero {
-                padding: 30px 20px;
+                padding: 25px 20px;
                 min-height: auto;
+                order: 2;
             }
 
             .auth-hero h1 {
@@ -1242,47 +1219,39 @@
             }
 
             .auth-form-container {
-                padding: 30px 20px;
+                padding: 25px 20px;
                 overflow: visible;
+                order: 1;
+                flex: none;
             }
 
             .auth-form {
                 min-height: auto;
+                height: auto;
             }
 
             .register-content {
-                max-height: 50vh;
+                max-height: 45vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
+                margin-bottom: 15px;
             }
 
-            .btn, .control-btn, .user-avatar {
-                min-height: 44px;
-                min-width: 44px;
+            .form-control {
+                height: 50px;
+                padding: 12px 45px 12px 12px;
             }
-            
-            .btn-primary {
-                background: var(--primary);
-                color: white;
-                border: 2px solid var(--primary);
-                font-weight: 600;
+
+            .password-toggle {
+                width: 42px;
+                height: 42px;
+                right: 8px;
+                padding: 8px;
             }
-            
-            .btn-secondary {
-                background: transparent;
-                color: var(--primary);
-                border: 2px solid var(--primary);
-                font-weight: 600;
-            }
-            
+
             .btn {
-                font-weight: 600;
-                font-size: 1rem;
-                padding: 12px 16px;
-            }
-
-            input, select, textarea {
-                font-size: 16px !important;
+                min-height: 50px;
+                padding: 14px 18px;
             }
 
             .container {
@@ -1315,8 +1284,8 @@
             }
             
             .control-btn {
-                width: 45px;
-                height: 45px;
+                width: 48px;
+                height: 48px;
             }
             
             .plans-container {
@@ -1329,8 +1298,16 @@
             }
 
             .join-form {
-                padding: 30px 20px;
-                margin: 20px 0;
+                padding: 25px 20px;
+                margin: 15px 0;
+            }
+
+            .registration-progress {
+                margin-bottom: 20px;
+            }
+
+            .step-label {
+                font-size: 0.7rem;
             }
         }
 
@@ -1347,96 +1324,63 @@
                 padding: 20px 15px;
             }
 
+            .register-content {
+                max-height: 40vh;
+            }
+
             .plans-container {
                 gap: 10px;
             }
 
             .plan-card {
-                padding: 15px 10px;
+                padding: 15px 12px;
             }
 
-            .registration-progress {
-                margin-bottom: 20px;
+            .form-control {
+                height: 48px;
+                padding: 12px 42px 12px 12px;
             }
 
-            .step-label {
-                font-size: 0.7rem;
+            .password-toggle {
+                width: 40px;
+                height: 40px;
+                right: 6px;
+            }
+
+            .btn {
+                min-height: 48px;
+                padding: 12px 16px;
             }
         }
 
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @media (max-width: 360px) {
+            .auth-container {
+                margin: 5px 0;
+                max-height: 95vh;
+            }
 
-        .fade-in {
-            animation: fadeIn 0.5s ease;
-        }
+            .auth-form-container {
+                padding: 15px 12px;
+            }
 
-        /* Indicateur de temps restant */
-        .time-limit-indicator {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-        }
+            .register-content {
+                max-height: 35vh;
+            }
 
-        .time-limit-indicator.warning {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            animation: pulse 1s infinite;
-        }
+            .password-toggle {
+                width: 38px;
+                height: 38px;
+                right: 5px;
+            }
 
-        .time-remaining {
-            font-family: monospace;
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin: 5px 0;
-        }
+            .form-control {
+                height: 46px;
+                padding: 12px 40px 12px 12px;
+            }
 
-        /* Loader */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 3px solid var(--primary);
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Style pour le succès du plan gratuit */
-        .free-plan-success {
-            text-align: center;
-            padding: 40px 20px;
-            background: rgba(16, 185, 129, 0.1);
-            border-radius: 15px;
-            border: 2px solid var(--success);
-        }
-
-        .free-plan-success i {
-            font-size: 4rem;
-            color: var(--success);
-            margin-bottom: 20px;
-        }
-
-        .free-plan-success h3 {
-            color: var(--success-dark);
-            margin-bottom: 15px;
-            font-size: 1.5rem;
-        }
-
-        .free-plan-success p {
-            color: var(--gray-600);
-            font-size: 1.1rem;
+            .btn {
+                min-height: 46px;
+            }
         }
     </style>
 </head>
@@ -1692,7 +1636,6 @@
                                 <div class="text-center mb-6">
                                     <p class="text-gray-600">Paiement sécurisé pour la formule <span id="paymentPlanType"></span></p>
                                 </div>
-                                <!-- Ici vous pouvez ajouter l'intégration de votre solution de paiement -->
                                 <div class="bg-gray-100 p-6 rounded-lg text-center">
                                     <p class="text-gray-600 mb-4">Intégration de paiement à configurer</p>
                                     <button class="btn btn-outline">
@@ -1751,7 +1694,6 @@
                 <span class="status-text">Connexion...</span>
             </div>
             
-            <!-- Indicateur de temps restant -->
             <div id="timeLimitIndicator" class="time-limit-indicator hidden">
                 <div>⏰ Temps restant (Formule Basique)</div>
                 <div id="timeRemaining" class="time-remaining">40:00</div>
@@ -1785,7 +1727,6 @@
             </div>
         </div>
 
-        <!-- Indicateur d'enregistrement -->
         <div id="recordingIndicator" class="recording-indicator hidden">
             <div class="recording-dot"></div>
             <span>ENREGISTREMENT</span>
@@ -1867,17 +1808,13 @@
     // CONFIGURATION NETLIFY + RAILWAY
     // =============================================
 
-    // 🔧 URL RAILWAY CORRECTE
     const API_BASE = "https://benelvisio.up.railway.app";
     
     console.log('🚀 Benelvisio - Configuration Production');
     console.log('🌐 Backend URL:', API_BASE);
-    console.log('📍 Frontend URL:', window.location.origin);
 
     let authToken = localStorage.getItem('authToken');
     let currentUser = null;
-
-    // Variables globales
     let socket = null;
     let localStream = null;
     let peers = new Map();
@@ -1885,21 +1822,16 @@
     let userData = null;
     let isAudioMuted = false;
     let isVideoOff = false;
-
-    // Variables d'enregistrement
     let mediaRecorder = null;
     let recordedChunks = [];
     let isRecording = false;
     let recordingStartTime = null;
     let recordingTimer = null;
-
-    // Variables de partage d'écran
     let screenStream = null;
     let isSharingScreen = false;
-
-    // Timer pour la limite de temps
     let timeLimitTimer = null;
     let remainingTime = 40 * 60;
+    let selectedPlan = null;
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', function() {
@@ -1914,6 +1846,7 @@
             
             initializeEventListeners();
             checkAuthentication();
+            enhanceMobileExperience();
             
             updateLoadingStatus('Prêt !');
             setTimeout(() => {
@@ -1923,6 +1856,23 @@
         } catch (error) {
             console.error('Erreur initialisation:', error);
             hideLoadingScreen();
+        }
+    }
+
+    function enhanceMobileExperience() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            document.body.classList.add('mobile-device');
+            
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                });
+            });
         }
     }
 
@@ -1989,7 +1939,6 @@
         document.getElementById('callBtn').addEventListener('click', leaveMeeting);
     }
 
-    // Fonction pour basculer la visibilité du mot de passe
     function togglePasswordVisibility(passwordFieldId, toggleButton) {
         const passwordField = document.getElementById(passwordFieldId);
         const icon = toggleButton.querySelector('i');
@@ -2003,7 +1952,6 @@
         }
     }
 
-    // Gestion de l'authentification
     async function handleLogin() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
@@ -2156,7 +2104,6 @@
         }
     }
 
-    // Navigation entre écrans
     function showAuthScreen() {
         document.getElementById('authScreen').classList.remove('hidden');
         document.getElementById('joinScreen').classList.add('hidden');
@@ -2182,7 +2129,6 @@
         addLocalVideo();
         updateParticipantsList();
         
-        // Démarrer le timer de limite si formule basique
         if (currentUser && currentUser.plan_type === 'basic' && userData && userData.isHost) {
             startTimeLimitCounter();
         }
@@ -2199,7 +2145,6 @@
         showPlanSelection();
     }
 
-    // Gestion des réunions
     async function joinMeeting() {
         console.log('🔗 Connexion réunion...');
         const userName = document.getElementById('userName').value.trim();
@@ -2236,7 +2181,6 @@
         }
     }
 
-    // Socket.io pour la communication en temps réel
     function initializeSocket() {
         console.log('🔌 Connexion au backend Railway...');
         
@@ -2309,14 +2253,12 @@
             leaveMeeting();
         });
 
-        // Chat en temps réel
         socket.on('chat-message', (data) => {
             console.log('💬 Message reçu:', data);
             addChatMessage(data.userName, data.message, data.userId, false);
         });
     }
 
-    // Gestion du temps limite
     function startTimeLimitCounter() {
         const timeLimitIndicator = document.getElementById('timeLimitIndicator');
         const timeRemainingElement = document.getElementById('timeRemaining');
@@ -2360,7 +2302,6 @@
         document.getElementById('timeLimitIndicator').classList.add('hidden');
     }
 
-    // Fonctions de base (abrégées pour la lisibilité)
     function updateConnectionStatus(status) {
         const statusElement = document.getElementById('connectionStatus');
         const statusText = statusElement.querySelector('.status-text');
@@ -2421,9 +2362,6 @@
         showAuthScreen();
     }
 
-    // Gestion de l'inscription
-    let selectedPlan = null;
-
     function selectPlan(plan) {
         selectedPlan = plan;
         document.querySelectorAll('.plan-card').forEach(card => {
@@ -2474,7 +2412,6 @@
             selectedPlan === 'basic' ? 'Gratuit' :
             selectedPlan === 'premium' ? '19,90€/mois' : '49,90€/mois';
         
-        // Afficher l'interface appropriée selon le plan
         if (selectedPlan === 'basic') {
             document.getElementById('freePlanSuccess').classList.remove('hidden');
             document.getElementById('paidPlanPayment').classList.add('hidden');
@@ -2505,7 +2442,6 @@
         });
     }
 
-    // Fonctions de base pour l'interface
     function logMessage(message) {
         const chatMessages = document.getElementById('chatMessages');
         const logElement = document.createElement('div');
@@ -2581,7 +2517,6 @@
         document.getElementById('participantCount').textContent = count;
     }
 
-    // Fonctions médias (simplifiées pour l'exemple)
     async function initializeMedia() {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({
@@ -2672,7 +2607,6 @@
         }
     }
 
-    // Fonctions de démo (à implémenter complètement)
     function toggleRecording() {
         alert('Fonctionnalité d\'enregistrement à implémenter');
     }
