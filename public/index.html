@@ -1710,516 +1710,632 @@
     </div>
 
     <script>
-        // =============================================
-        // CONFIGURATION RENDER
-        // =============================================
+// =============================================
+// CONFIGURATION ET VARIABLES GLOBALES
+// =============================================
 
-        const API_BASE = "https://benelvisio.onrender.com";
-        console.log('🚀 Benelvisio - Configuration Render');
-        console.log('🌐 Backend URL:', API_BASE);
+const API_BASE = "https://benelvisio.onrender.com";
+console.log('🚀 Benelvisio - Configuration Render');
+console.log('🌐 Backend URL:', API_BASE);
 
-        // Variables globales
-        let authToken = localStorage.getItem('authToken');
-        let currentUser = null;
-        let socket = null;
-        let localStream = null;
-        let peers = new Map();
-        let currentRoom = null;
-        let userData = null;
-        let isAudioMuted = false;
-        let isVideoOff = false;
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let isRecording = false;
-        let recordingStartTime = null;
-        let recordingTimer = null;
-        let screenStream = null;
-        let isSharingScreen = false;
-        let timeLimitTimer = null;
-        let remainingTime = 40 * 60;
-        let selectedPlan = 'basic';
+// Variables globales
+let authToken = localStorage.getItem('authToken');
+let currentUser = null;
+let socket = null;
+let localStream = null;
+let currentRoom = null;
+let userData = null;
+let isAudioMuted = false;
+let isVideoOff = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let recordingStartTime = null;
+let recordingTimer = null;
+let screenStream = null;
+let isSharingScreen = false;
+let timeLimitTimer = null;
+let remainingTime = 40 * 60;
+let selectedPlan = 'basic';
 
-        // Configuration WebRTC améliorée
-const rtcConfiguration = {
-    iceServers: [
-        // Serveurs STUN
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
+// =============================================
+// SOLUTION 1 - WEBRTC MANAGER ROBUSTE
+// =============================================
+
+class WebRTCManager {
+    constructor() {
+        this.peers = new Map();
+        this.iceQueue = new Map();
+        this.connectionAttempts = new Map();
+        this.MAX_ATTEMPTS = 2;
+    }
+
+    getConfig() {
+        return {
+            iceServers: [
+                // STUN seulement - plus stable
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ],
+            iceTransportPolicy: 'all',
+            iceCandidatePoolSize: 5
+        };
+    }
+
+    async createConnection(userId, localStream) {
+        console.log('🔄 Création connexion pour:', userId);
         
-        // Serveurs TURN publics
-        {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject', 
-            credential: 'openrelayproject'
-        },
-        {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        // Serveurs TURN alternatifs
-        {
-            urls: 'turn:numb.viagenie.ca',
-            username: 'webrtc@live.com',
-            credential: 'muazkh'
-        },
-        {
-            urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-            username: 'webrtc',
-            credential: 'webrtc'
-        }
-    ],
-    iceTransportPolicy: 'all',
-    bundlePolicy: 'max-bundle',
-    rtcpMuxPolicy: 'require',
-    iceCandidatePoolSize: 10
-};
+        this.cleanup(userId);
+        
+        const pc = new RTCPeerConnection(this.getConfig());
+        this.peers.set(userId, pc);
+        this.connectionAttempts.set(userId, 0);
 
-        // =============================================
-        // INITIALISATION PRINCIPALE
-        // =============================================
-
-        function initializeApp() {
-            console.log('🚀 Initialisation de l\'application...');
-            
-            updateLoadingStatus('Chargement de l\'interface...');
-            
-            initializeEventListeners();
-            checkAuthentication();
-            
-            updateLoadingStatus('Prêt !');
-            
-            setTimeout(() => {
-                hideLoadingScreen();
-                console.log('✅ Application chargée avec succès');
-            }, 1000);
-        }
-
-        function hideLoadingScreen() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.classList.add('fade-out');
-                setTimeout(() => {
-                    loadingScreen.classList.add('hidden');
-                }, 500);
-            }
-        }
-
-        function updateLoadingStatus(message) {
-            const statusElement = document.getElementById('loadingStatus');
-            if (statusElement) {
-                statusElement.textContent = message;
-            }
-        }
-
-        // =============================================
-        // GESTION DES ÉVÉNEMENTS
-        // =============================================
-
-        function initializeEventListeners() {
-            // Authentification
-            document.getElementById('loginBtn').addEventListener('click', handleLogin);
-            document.getElementById('showRegister').addEventListener('click', () => showRegisterForm());
-            document.getElementById('showLogin').addEventListener('click', () => showLoginForm());
-            
-            // Boutons œil pour les mots de passe
-            document.getElementById('toggleLoginPassword').addEventListener('click', function() {
-                togglePasswordVisibility('loginPassword', 'toggleLoginPassword');
+        // Ajouter les tracks locaux
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                pc.addTrack(track, localStream);
             });
-            
-            document.getElementById('toggleRegisterPassword').addEventListener('click', function() {
-                togglePasswordVisibility('registerPassword', 'toggleRegisterPassword');
-            });
+        }
 
-            // Inscription
-            document.querySelectorAll('.select-plan').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const plan = e.target.closest('button').dataset.plan;
-                    selectPlan(plan);
+        // Gestion des événements
+        this.setupEventHandlers(pc, userId);
+        
+        return pc;
+    }
+
+    setupEventHandlers(pc, userId) {
+        // Track distant
+        pc.ontrack = (event) => {
+            console.log('🎥 Track reçu:', userId);
+            if (event.streams[0]) {
+                this.onRemoteStream(userId, event.streams[0]);
+            }
+        };
+
+        // Candidats ICE
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('webrtc-ice-candidate', {
+                    to: userId,
+                    candidate: event.candidate,
+                    roomId: currentRoom
                 });
+            }
+        };
+
+        // État de connexion
+        pc.onconnectionstatechange = () => {
+            const state = pc.connectionState;
+            console.log(`🔗 ${userId} - État:`, state);
+            
+            switch(state) {
+                case 'connected':
+                    console.log('🎉 Connexion établie!');
+                    break;
+                case 'failed':
+                    console.log('❌ Échec connexion');
+                    this.handleConnectionFailure(userId);
+                    break;
+                case 'disconnected':
+                    console.log('🔌 Déconnexion');
+                    setTimeout(() => this.reconnect(userId), 2000);
+                    break;
+            }
+        };
+    }
+
+    async startCall(userId, localStream) {
+        try {
+            const pc = await this.createConnection(userId, localStream);
+            
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            // Attendre que les candidats ICE soient générés
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            socket.emit('webrtc-offer', {
+                to: userId,
+                offer: pc.localDescription,
+                roomId: currentRoom
             });
             
-            document.getElementById('continueToPayment').addEventListener('click', showPaymentStep);
-            document.getElementById('backToPlans').addEventListener('click', showPlanSelection);
-            document.getElementById('completePayment').addEventListener('click', handleRegistration);
-            document.getElementById('changePlan').addEventListener('click', showPlanSelection);
-
-            // Réunions
-            document.getElementById('joinBtn').addEventListener('click', joinMeeting);
-            document.getElementById('createMeetingBtn').addEventListener('click', createMeeting);
-            document.getElementById('logoutBtn').addEventListener('click', logout);
-            document.getElementById('headerLogoutBtn').addEventListener('click', logout);
-
-            // Chat
-            document.getElementById('sendBtn').addEventListener('click', sendMessage);
-            document.getElementById('chatInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') sendMessage();
-            });
-
-            // Contrôles
-            document.getElementById('muteBtn').addEventListener('click', toggleAudio);
-            document.getElementById('videoBtn').addEventListener('click', toggleVideo);
-            document.getElementById('recordBtn').addEventListener('click', toggleRecording);
-            document.getElementById('screenShareBtn').addEventListener('click', toggleScreenShare);
-            document.getElementById('callBtn').addEventListener('click', leaveMeeting);
+            console.log('✅ Offre WebRTC envoyée à:', userId);
+            
+        } catch (error) {
+            console.error('❌ Erreur démarrage appel:', error);
+            this.cleanup(userId);
         }
+    }
 
-        // =============================================
-        // AUTHENTIFICATION ET INSCRIPTION
-        // =============================================
-
-        function togglePasswordVisibility(passwordFieldId, toggleButtonId) {
-            const passwordField = document.getElementById(passwordFieldId);
-            const toggleButton = document.getElementById(toggleButtonId);
-            const icon = toggleButton.querySelector('i');
+    async handleOffer(userId, offer, localStream) {
+        try {
+            const pc = await this.createConnection(userId, localStream);
             
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                icon.className = 'fas fa-eye-slash';
+            await pc.setRemoteDescription(offer);
+            
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            socket.emit('webrtc-answer', {
+                to: userId,
+                answer: pc.localDescription,
+                roomId: currentRoom
+            });
+            
+            console.log('✅ Réponse WebRTC envoyée à:', userId);
+            
+        } catch (error) {
+            console.error('❌ Erreur traitement offre:', error);
+            this.cleanup(userId);
+        }
+    }
+
+    async handleAnswer(userId, answer) {
+        const pc = this.peers.get(userId);
+        if (!pc) return;
+
+        try {
+            // Vérifier l'état avant de définir la réponse
+            if (pc.signalingState === 'have-local-offer') {
+                await pc.setRemoteDescription(answer);
+                console.log('✅ Réponse distante définie pour:', userId);
             } else {
-                passwordField.type = 'password';
-                icon.className = 'fas fa-eye';
+                console.warn('⚠️ État inattendu:', pc.signalingState);
+                this.cleanup(userId);
             }
+        } catch (error) {
+            console.error('❌ Erreur traitement réponse:', error);
+            this.cleanup(userId);
         }
+    }
 
-        async function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            if (!email || !password) {
-                alert('Veuillez remplir tous les champs');
-                return;
-            }
-            
+    async handleIceCandidate(userId, candidate) {
+        const pc = this.peers.get(userId);
+        if (!pc || !candidate) return;
+
+        try {
+            await pc.addIceCandidate(candidate);
+        } catch (error) {
+            console.log('⚠️ Candidat ICE ignoré');
+        }
+    }
+
+    handleConnectionFailure(userId) {
+        const attempts = this.connectionAttempts.get(userId) || 0;
+        
+        if (attempts < this.MAX_ATTEMPTS) {
+            this.connectionAttempts.set(userId, attempts + 1);
+            setTimeout(() => this.reconnect(userId), 3000);
+        } else {
+            console.log('🛑 Maximum de tentatives atteint');
+            this.cleanup(userId);
+        }
+    }
+
+    reconnect(userId) {
+        if (socket && socket.connected && localStream) {
+            this.startCall(userId, localStream);
+        }
+    }
+
+    cleanup(userId) {
+        const pc = this.peers.get(userId);
+        if (pc) {
             try {
-                const response = await fetch(API_BASE + '/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    authToken = data.token;
-                    currentUser = data.user;
-                    
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('userData', JSON.stringify(currentUser));
-                    
-                    showJoinScreen();
-                    updateUserInterface();
-                } else {
-                    alert('❌ ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erreur login:', error);
-                alert('❌ Erreur de connexion au serveur');
-            }
+                pc.close();
+            } catch (e) {}
+            this.peers.delete(userId);
         }
+        this.iceQueue.delete(userId);
+        this.connectionAttempts.delete(userId);
+        
+        // Nettoyer l'élément vidéo
+        const videoElement = document.getElementById(`remoteVideo-${userId}`);
+        if (videoElement) videoElement.remove();
+    }
 
-        async function handleRegistration() {
-            const fullName = document.getElementById('fullName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
+    onRemoteStream(userId, stream) {
+        console.log('🎥 Affichage stream distant pour:', userId);
+        addRemoteVideo(userId, stream);
+    }
+}
+
+// Initialisation globale du manager WebRTC
+const webRTCManager = new WebRTCManager();
+
+// =============================================
+// FONCTIONS D'INITIALISATION
+// =============================================
+
+function initializeApp() {
+    console.log('🚀 Initialisation de l\'application...');
+    
+    updateLoadingStatus('Chargement de l\'interface...');
+    
+    initializeEventListeners();
+    checkAuthentication();
+    
+    updateLoadingStatus('Prêt !');
+    
+    setTimeout(() => {
+        hideLoadingScreen();
+        console.log('✅ Application chargée avec succès');
+    }, 1000);
+}
+
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('fade-out');
+        setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+        }, 500);
+    }
+}
+
+function updateLoadingStatus(message) {
+    const statusElement = document.getElementById('loadingStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+}
+
+// =============================================
+// GESTION DES ÉVÉNEMENTS
+// =============================================
+
+function initializeEventListeners() {
+    // Authentification
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('showRegister').addEventListener('click', () => showRegisterForm());
+    document.getElementById('showLogin').addEventListener('click', () => showLoginForm());
+    
+    // Boutons œil pour les mots de passe
+    document.getElementById('toggleLoginPassword').addEventListener('click', function() {
+        togglePasswordVisibility('loginPassword', 'toggleLoginPassword');
+    });
+    
+    document.getElementById('toggleRegisterPassword').addEventListener('click', function() {
+        togglePasswordVisibility('registerPassword', 'toggleRegisterPassword');
+    });
+
+    // Inscription
+    document.querySelectorAll('.select-plan').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const plan = e.target.closest('button').dataset.plan;
+            selectPlan(plan);
+        });
+    });
+    
+    document.getElementById('continueToPayment').addEventListener('click', showPaymentStep);
+    document.getElementById('backToPlans').addEventListener('click', showPlanSelection);
+    document.getElementById('completePayment').addEventListener('click', handleRegistration);
+    document.getElementById('changePlan').addEventListener('click', showPlanSelection);
+
+    // Réunions
+    document.getElementById('joinBtn').addEventListener('click', joinMeeting);
+    document.getElementById('createMeetingBtn').addEventListener('click', createMeeting);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('headerLogoutBtn').addEventListener('click', logout);
+
+    // Chat
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    // Contrôles
+    document.getElementById('muteBtn').addEventListener('click', toggleAudio);
+    document.getElementById('videoBtn').addEventListener('click', toggleVideo);
+    document.getElementById('recordBtn').addEventListener('click', toggleRecording);
+    document.getElementById('screenShareBtn').addEventListener('click', toggleScreenShare);
+    document.getElementById('callBtn').addEventListener('click', leaveMeeting);
+}
+
+// =============================================
+// AUTHENTIFICATION ET INSCRIPTION
+// =============================================
+
+function togglePasswordVisibility(passwordFieldId, toggleButtonId) {
+    const passwordField = document.getElementById(passwordFieldId);
+    const toggleButton = document.getElementById(toggleButtonId);
+    const icon = toggleButton.querySelector('i');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        passwordField.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        alert('Veuillez remplir tous les champs');
+        return;
+    }
+    
+    try {
+        const response = await fetch(API_BASE + '/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            authToken = data.token;
+            currentUser = data.user;
             
-            if (!fullName || !email || !password) {
-                alert('Veuillez remplir tous les champs obligatoires');
-                return;
-            }
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('userData', JSON.stringify(currentUser));
             
-            try {
-                const response = await fetch(API_BASE + '/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        fullName, 
-                        email, 
-                        password, 
-                        planType: selectedPlan 
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    authToken = data.token;
-                    currentUser = data.user;
-                    
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('userData', JSON.stringify(currentUser));
-                    
-                    alert('🎉 Compte créé avec succès !');
-                    showJoinScreen();
-                } else {
-                    alert('❌ ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erreur inscription:', error);
-                alert('❌ Erreur lors de la création du compte');
-            }
+            showJoinScreen();
+            updateUserInterface();
+        } else {
+            alert('❌ ' + data.error);
         }
+    } catch (error) {
+        console.error('Erreur login:', error);
+        alert('❌ Erreur de connexion au serveur');
+    }
+}
 
-        function selectPlan(plan) {
-            selectedPlan = plan;
-            document.querySelectorAll('.plan-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            document.querySelector(`[data-plan="${plan}"]`).classList.add('selected');
-            showPersonalInfoStep();
+async function handleRegistration() {
+    const fullName = document.getElementById('fullName').value;
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    
+    if (!fullName || !email || !password) {
+        alert('Veuillez remplir tous les champs obligatoires');
+        return;
+    }
+    
+    try {
+        const response = await fetch(API_BASE + '/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                fullName, 
+                email, 
+                password, 
+                planType: selectedPlan 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            authToken = data.token;
+            currentUser = data.user;
+            
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('userData', JSON.stringify(currentUser));
+            
+            alert('🎉 Compte créé avec succès !');
+            showJoinScreen();
+        } else {
+            alert('❌ ' + data.error);
         }
+    } catch (error) {
+        console.error('Erreur inscription:', error);
+        alert('❌ Erreur lors de la création du compte');
+    }
+}
 
-        function showPlanSelection() {
-            document.getElementById('planSelectionStep').classList.remove('hidden');
-            document.getElementById('personalInfoStep').classList.add('hidden');
-            document.getElementById('paymentStep').classList.add('hidden');
-            updateProgress(1);
+function selectPlan(plan) {
+    selectedPlan = plan;
+    document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelector(`[data-plan="${plan}"]`).classList.add('selected');
+    showPersonalInfoStep();
+}
+
+function showPlanSelection() {
+    document.getElementById('planSelectionStep').classList.remove('hidden');
+    document.getElementById('personalInfoStep').classList.add('hidden');
+    document.getElementById('paymentStep').classList.add('hidden');
+    updateProgress(1);
+}
+
+function showPersonalInfoStep() {
+    if (!selectedPlan) return;
+    
+    const currentPlanName = document.getElementById('currentPlanName');
+    const currentPlanPrice = document.getElementById('currentPlanPrice');
+    
+    if (currentPlanName) {
+        currentPlanName.textContent = 
+            selectedPlan === 'basic' ? 'Formule Basique' :
+            selectedPlan === 'premium' ? 'Formule Professionnelle' : 'Formule Entreprise';
+    }
+    
+    if (currentPlanPrice) {
+        currentPlanPrice.textContent = 
+            selectedPlan === 'basic' ? 'Gratuit' :
+            selectedPlan === 'premium' ? '19,90€/mois' : '49,90€/mois';
+    }
+    
+    document.getElementById('planSelectionStep').classList.add('hidden');
+    document.getElementById('personalInfoStep').classList.remove('hidden');
+    document.getElementById('paymentStep').classList.add('hidden');
+    updateProgress(2);
+}
+
+function showPaymentStep() {
+    const fullName = document.getElementById('fullName').value;
+    const email = document.getElementById('registerEmail').value;
+    
+    if (!fullName || !email) {
+        alert('Veuillez remplir les champs obligatoires');
+        return;
+    }
+    
+    const paymentPlanName = document.getElementById('paymentPlanName');
+    const paymentPlanPrice = document.getElementById('paymentPlanPrice');
+    
+    if (paymentPlanName) {
+        paymentPlanName.textContent = 
+            selectedPlan === 'basic' ? 'Formule Basique' :
+            selectedPlan === 'premium' ? 'Formule Professionnelle' : 'Formule Entreprise';
+    }
+    
+    if (paymentPlanPrice) {
+        paymentPlanPrice.textContent = 
+            selectedPlan === 'basic' ? 'Gratuit' :
+            selectedPlan === 'premium' ? '19,90€/mois' : '49,90€/mois';
+    }
+    
+    document.getElementById('planSelectionStep').classList.add('hidden');
+    document.getElementById('personalInfoStep').classList.add('hidden');
+    document.getElementById('paymentStep').classList.remove('hidden');
+    updateProgress(3);
+}
+
+function updateProgress(step) {
+    document.querySelectorAll('.progress-step').forEach((progressStep, index) => {
+        if (index + 1 < step) {
+            progressStep.classList.add('completed');
+            progressStep.classList.remove('active');
+        } else if (index + 1 === step) {
+            progressStep.classList.add('active');
+            progressStep.classList.remove('completed');
+        } else {
+            progressStep.classList.remove('active', 'completed');
         }
+    });
+}
 
-        function showPersonalInfoStep() {
-            if (!selectedPlan) return;
-            
-            const currentPlanName = document.getElementById('currentPlanName');
-            const currentPlanPrice = document.getElementById('currentPlanPrice');
-            
-            if (currentPlanName) {
-                currentPlanName.textContent = 
-                    selectedPlan === 'basic' ? 'Formule Basique' :
-                    selectedPlan === 'premium' ? 'Formule Professionnelle' : 'Formule Entreprise';
-            }
-            
-            if (currentPlanPrice) {
-                currentPlanPrice.textContent = 
-                    selectedPlan === 'basic' ? 'Gratuit' :
-                    selectedPlan === 'premium' ? '19,90€/mois' : '49,90€/mois';
-            }
-            
-            document.getElementById('planSelectionStep').classList.add('hidden');
-            document.getElementById('personalInfoStep').classList.remove('hidden');
-            document.getElementById('paymentStep').classList.add('hidden');
-            updateProgress(2);
+// =============================================
+// GESTION DES ÉCRANS
+// =============================================
+
+function checkAuthentication() {
+    const token = localStorage.getItem('authToken');
+    const user = localStorage.getItem('userData');
+    
+    if (token && user) {
+        try {
+            authToken = token;
+            currentUser = JSON.parse(user);
+            showJoinScreen();
+            updateUserInterface();
+        } catch (e) {
+            console.error('❌ Erreur parsing user data:', e);
+            showAuthScreen();
         }
+    } else {
+        showAuthScreen();
+    }
+}
 
-        function showPaymentStep() {
-            const fullName = document.getElementById('fullName').value;
-            const email = document.getElementById('registerEmail').value;
-            
-            if (!fullName || !email) {
-                alert('Veuillez remplir les champs obligatoires');
-                return;
-            }
-            
-            const paymentPlanName = document.getElementById('paymentPlanName');
-            const paymentPlanPrice = document.getElementById('paymentPlanPrice');
-            
-            if (paymentPlanName) {
-                paymentPlanName.textContent = 
-                    selectedPlan === 'basic' ? 'Formule Basique' :
-                    selectedPlan === 'premium' ? 'Formule Professionnelle' : 'Formule Entreprise';
-            }
-            
-            if (paymentPlanPrice) {
-                paymentPlanPrice.textContent = 
-                    selectedPlan === 'basic' ? 'Gratuit' :
-                    selectedPlan === 'premium' ? '19,90€/mois' : '49,90€/mois';
-            }
-            
-            document.getElementById('planSelectionStep').classList.add('hidden');
-            document.getElementById('personalInfoStep').classList.add('hidden');
-            document.getElementById('paymentStep').classList.remove('hidden');
-            updateProgress(3);
-        }
+function showAuthScreen() {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('joinScreen').classList.add('hidden');
+    document.getElementById('mainInterface').classList.add('hidden');
+}
 
-        function updateProgress(step) {
-            document.querySelectorAll('.progress-step').forEach((progressStep, index) => {
-                if (index + 1 < step) {
-                    progressStep.classList.add('completed');
-                    progressStep.classList.remove('active');
-                } else if (index + 1 === step) {
-                    progressStep.classList.add('active');
-                    progressStep.classList.remove('completed');
-                } else {
-                    progressStep.classList.remove('active', 'completed');
-                }
-            });
-        }
+function showJoinScreen() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('joinScreen').classList.remove('hidden');
+    document.getElementById('mainInterface').classList.add('hidden');
+    
+    if (currentUser) {
+        document.getElementById('userName').value = currentUser.full_name;
+    }
+}
 
-        // =============================================
-        // GESTION DES ÉCRANS
-        // =============================================
+function showMainInterface() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('joinScreen').classList.add('hidden');
+    document.getElementById('mainInterface').classList.remove('hidden');
+    
+    updateRoomInfo();
+    addLocalVideo();
+    updateParticipantsList();
+    
+    if (currentUser && currentUser.plan_type === 'basic' && userData && userData.isHost) {
+        startTimeLimitCounter();
+    }
+}
 
-        function checkAuthentication() {
-            const token = localStorage.getItem('authToken');
-            const user = localStorage.getItem('userData');
-            
-            if (token && user) {
-                try {
-                    authToken = token;
-                    currentUser = JSON.parse(user);
-                    showJoinScreen();
-                    updateUserInterface();
-                } catch (e) {
-                    console.error('❌ Erreur parsing user data:', e);
-                    showAuthScreen();
-                }
-            } else {
-                showAuthScreen();
-            }
-        }
+function showLoginForm() {
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+}
 
-        function showAuthScreen() {
-            document.getElementById('authScreen').classList.remove('hidden');
-            document.getElementById('joinScreen').classList.add('hidden');
-            document.getElementById('mainInterface').classList.add('hidden');
-        }
+function showRegisterForm() {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('registerForm').classList.remove('hidden');
+    showPlanSelection();
+}
 
-        function showJoinScreen() {
-            document.getElementById('authScreen').classList.add('hidden');
-            document.getElementById('joinScreen').classList.remove('hidden');
-            document.getElementById('mainInterface').classList.add('hidden');
-            
-            if (currentUser) {
-                document.getElementById('userName').value = currentUser.full_name;
-            }
-        }
+function updateUserInterface() {
+    if (currentUser) {
+        document.getElementById('userFullName').textContent = currentUser.full_name;
+        document.getElementById('userPlan').textContent = `Formule ${
+            currentUser.plan_type === 'basic' ? 'Basique' : 
+            currentUser.plan_type === 'premium' ? 'Professionnelle' : 'Entreprise'
+        }`;
+        document.getElementById('userAvatar').textContent = currentUser.full_name.charAt(0).toUpperCase();
+    }
+}
 
-        function showMainInterface() {
-            document.getElementById('authScreen').classList.add('hidden');
-            document.getElementById('joinScreen').classList.add('hidden');
-            document.getElementById('mainInterface').classList.remove('hidden');
-            
-            updateRoomInfo();
-            addLocalVideo();
-            updateParticipantsList();
-            
-            if (currentUser && currentUser.plan_type === 'basic' && userData && userData.isHost) {
-                startTimeLimitCounter();
-            }
-        }
+// =============================================
+// GESTION DES RÉUNIONS
+// =============================================
 
-        function showLoginForm() {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('registerForm').classList.add('hidden');
-        }
+async function createMeeting() {
+    const userName = document.getElementById('userName').value.trim();
+    
+    if (!userName) {
+        alert('Veuillez entrer votre nom');
+        return;
+    }
+    
+    const createBtn = document.getElementById('createMeetingBtn');
+    const originalText = createBtn.innerHTML;
+    
+    try {
+        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+        createBtn.disabled = true;
 
-        function showRegisterForm() {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('registerForm').classList.remove('hidden');
-            showPlanSelection();
-        }
+        console.log('🚀 Tentative de création de réunion...');
+        
+        const response = await fetch(API_BASE + '/api/create-meeting', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken
+            },
+            body: JSON.stringify({ 
+                userId: currentUser.id,
+                meetingTitle: 'Réunion ' + userName,
+                maxParticipants: currentUser.plan_type !== 'basic' ? 50 : 4
+            })
+        });
 
-        function updateUserInterface() {
-            if (currentUser) {
-                document.getElementById('userFullName').textContent = currentUser.full_name;
-                document.getElementById('userPlan').textContent = `Formule ${
-                    currentUser.plan_type === 'basic' ? 'Basique' : 
-                    currentUser.plan_type === 'premium' ? 'Professionnelle' : 'Entreprise'
-                }`;
-                document.getElementById('userAvatar').textContent = currentUser.full_name.charAt(0).toUpperCase();
-            }
-        }
-
-        // =============================================
-        // GESTION DES RÉUNIONS
-        // =============================================
-
-        async function createMeeting() {
-            const userName = document.getElementById('userName').value.trim();
-            
-            if (!userName) {
-                alert('Veuillez entrer votre nom');
-                return;
-            }
-            
-            const createBtn = document.getElementById('createMeetingBtn');
-            const originalText = createBtn.innerHTML;
-            
-            try {
-                createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
-                createBtn.disabled = true;
-
-                console.log('🚀 Tentative de création de réunion...');
-                
-                const response = await fetch(API_BASE + '/api/create-meeting', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + authToken
-                    },
-                    body: JSON.stringify({ 
-                        userId: currentUser.id,
-                        meetingTitle: 'Réunion ' + userName,
-                        maxParticipants: currentUser.plan_type !== 'basic' ? 50 : 4
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    const roomCode = data.meeting.code;
-                    
-                    userData = {
-                        name: userName,
-                        isHost: true,
-                        userId: currentUser.id,
-                        email: currentUser.email,
-                        planType: currentUser.plan_type,
-                        socketId: null
-                    };
-                    
-                    currentRoom = roomCode;
-                    
-                    try {
-                        await initializeMedia();
-                        initializeSocket();
-                        console.log('✅ Réunion créée:', roomCode);
-                    } catch (error) {
-                        console.error('❌ Erreur création réunion:', error);
-                        alert('Erreur lors de la création de la réunion: ' + error.message);
-                    }
-                } else {
-                    console.error('❌ Erreur API:', data.error);
-                    alert('❌ Erreur: ' + data.error);
-                }
-            } catch (error) {
-                console.error('❌ Erreur création meeting:', error);
-                alert('❌ Erreur de création de réunion: ' + error.message);
-            } finally {
-                createBtn.innerHTML = originalText;
-                createBtn.disabled = false;
-            }
-        }
-
-        async function joinMeeting() {
-            console.log('🔗 Connexion réunion...');
-            const userName = document.getElementById('userName').value.trim();
-            const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
-            
-            if (!userName) {
-                alert('Veuillez entrer votre nom');
-                return;
-            }
-            
-            if (!roomCode) {
-                alert('Veuillez entrer un code de réunion');
-                return;
-            }
+        const data = await response.json();
+        
+        if (data.success) {
+            const roomCode = data.meeting.code;
             
             userData = {
                 name: userName,
-                isHost: false,
+                isHost: true,
                 userId: currentUser.id,
                 email: currentUser.email,
                 planType: currentUser.plan_type,
@@ -2231,1065 +2347,725 @@ const rtcConfiguration = {
             try {
                 await initializeMedia();
                 initializeSocket();
-                console.log('✅ Tentative de rejoindre:', roomCode);
+                console.log('✅ Réunion créée:', roomCode);
             } catch (error) {
-                console.error('❌ Erreur connexion réunion:', error);
-                alert('Erreur lors de la connexion à la réunion');
+                console.error('❌ Erreur création réunion:', error);
+                alert('Erreur lors de la création de la réunion: ' + error.message);
             }
-        }
-
-        function initializeSocket() {
-            console.log('🔌 Connexion au backend...');
-
-            socket = io(API_BASE, {
-        transports: ['websocket', 'polling'],
-        timeout: 60000,
-        pingTimeout: 30000,
-        pingInterval: 25000,
-        connectTimeout: 45000,
-        upgradeTimeout: 30000,
-        reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000
-    });
-
-            socket.on('connect', () => {
-                console.log('✅ Connecté au backend');
-                updateConnectionStatus('online');
-                
-                userData.socketId = socket.id;
-                
-                socket.emit('join-room', {
-                    roomId: currentRoom,
-                    userData: userData
-                });
-                
-                showMainInterface();
-                addChatMessage('Système', '🔗 Connecté à la réunion ' + currentRoom, 'system', false);
-            });
-
-            socket.on('disconnect', (reason) => {
-                console.log('🔌 Déconnecté:', reason);
-                updateConnectionStatus('offline');
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('❌ Erreur de connexion:', error);
-                updateConnectionStatus('offline');
-                addChatMessage('Système', '❌ Erreur de connexion au serveur', 'system', false);
-            });
-
-            // Événements WebRTC
-            socket.on('webrtc-offer', (data) => {
-                console.log('📨 Offre WebRTC reçue de:', data.from);
-                if (data.from !== socket.id) {
-                    handleWebRTCOffer(data.from, data.offer);
-                }
-            });
-
-            socket.on('webrtc-answer', (data) => {
-                console.log('📨 Réponse WebRTC reçue de:', data.from);
-                if (data.from !== socket.id) {
-                    handleWebRTCAnswer(data.from, data.answer);
-                }
-            });
-
-            socket.on('webrtc-ice-candidate', (data) => {
-                console.log('🧊 Candidat ICE reçu de:', data.from);
-                if (data.from !== socket.id) {
-                    handleWebRTCIceCandidate(data.from, data.candidate);
-                }
-            });
-
-            socket.on('user-joined', (data) => {
-                console.log('👤 Utilisateur rejoint:', data.userData.name);
-                addChatMessage('Système', '👤 ' + data.userData.name + ' a rejoint la réunion', 'system', false);
-                addParticipant(data.userId, data.userData);
-                
-                if (data.userId !== socket.id) {
-                    setTimeout(() => {
-                        startWebRTC(data.userId);
-                    }, 2000);
-                }
-            });
-
-            socket.on('user-left', (data) => {
-                console.log('👋 Utilisateur parti:', data.userData.name);
-                addChatMessage('Système', '👋 ' + data.userData.name + ' a quitté la réunion', 'system', false);
-                removeParticipant(data.userId);
-                cleanupWebRTC(data.userId);
-            });
-
-            socket.on('existing-users', (users) => {
-                console.log('📋 Utilisateurs existants:', users.length);
-                
-                users.forEach((user, index) => {
-                    if (user.userId !== socket.id) {
-                        addParticipant(user.userId, user.userData);
-                        
-                        const delay = 2000 + (index * 2000);
-                        setTimeout(() => {
-                            if (!peers.has(user.userId)) {
-                                startWebRTC(user.userId);
-                            }
-                        }, delay);
-                    }
-                });
-            });
-
-            socket.on('chat-message', (data) => {
-                console.log('💬 Message reçu:', data);
-                addChatMessage(data.userName, data.message, data.userId, false);
-            });
-
-            socket.on('time-limit-info', (data) => {
-                console.log('⏰ Info limite de temps:', data);
-                if (data.remaining) {
-                    remainingTime = data.remaining;
-                    startTimeLimitCounter();
-                }
-            });
-        }
-
-        // =============================================
-        // FONCTIONS WEBRTC
-        // =============================================
-
-        // Variables pour la gestion ICE
-const iceCandidateQueue = new Map();
-let connectionAttempts = new Map();
-const MAX_RETRIES = 3;
-
-async function createPeerConnection(targetUserId) {
-    console.log('🔧 Création PeerConnection pour:', targetUserId);
-    
-    if (peers.has(targetUserId)) {
-        console.log('⚠️ Connexion existe déjà, nettoyage...');
-        cleanupWebRTC(targetUserId);
-    }
-    
-    const peerConnection = new RTCPeerConnection(rtcConfiguration);
-    peers.set(targetUserId, peerConnection);
-    
-    // Ajouter les tracks locaux
-    if (localStream) {
-        localStream.getTracks().forEach(track => {
-            console.log('➕ Ajout track local:', track.kind);
-            peerConnection.addTrack(track, localStream);
-        });
-    }
-    
-    // Gestion des tracks distants
-    peerConnection.ontrack = (event) => {
-        console.log('📹 Track distant reçu de:', targetUserId, event.track.kind);
-        
-        if (event.streams && event.streams[0]) {
-            const remoteStream = event.streams[0];
-            addRemoteVideo(targetUserId, remoteStream);
-            console.log('✅ Stream distant ajouté avec succès');
-        }
-    };
-    
-    // Gestion des candidats ICE
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            console.log('🧊 Candidat ICE généré pour:', targetUserId);
-            socket.emit('webrtc-ice-candidate', {
-                to: targetUserId,
-                candidate: event.candidate,
-                roomId: currentRoom
-            });
         } else {
-            console.log('✅ Fin des candidats ICE pour:', targetUserId);
+            console.error('❌ Erreur API:', data.error);
+            alert('❌ Erreur: ' + data.error);
         }
-    };
-    
-    // Surveillance de l'état de connexion
-    peerConnection.onconnectionstatechange = () => {
-        const state = peerConnection.connectionState;
-        console.log(`🔗 État connexion ${targetUserId}: ${state}`);
-        
-        if (state === 'connected') {
-            console.log(`🎉 Connexion WebRTC établie avec ${targetUserId}`);
-            connectionAttempts.set(targetUserId, 0);
-        } else if (state === 'failed' || state === 'disconnected') {
-            console.warn(`⚠️ Problème connexion ${targetUserId}: ${state}`);
-            
-            if (connectionAttempts.get(targetUserId) < MAX_RETRIES) {
-                setTimeout(() => {
-                    if (peers.has(targetUserId)) {
-                        console.log('🔄 Reconnexion WebRTC...');
-                        restartWebRTCConnection(targetUserId);
-                    }
-                }, 2000);
-            }
-        }
-    };
-    
-    peerConnection.oniceconnectionstatechange = () => {
-        console.log(`🧊 État ICE ${targetUserId}:`, peerConnection.iceConnectionState);
-    };
-    
-    return peerConnection;
-}
-
-async function startWebRTC(targetUserId) {
-    console.log('🚀 Démarrage WebRTC avec:', targetUserId);
-    
-    // Nettoyer toute connexion existante
-    if (peers.has(targetUserId)) {
-        cleanupWebRTC(targetUserId);
-    }
-    
-    try {
-        const peerConnection = new RTCPeerConnection(rtcConfiguration);
-        peers.set(targetUserId, peerConnection);
-        peerStates.set(targetUserId, 'initiating');
-        
-        // Ajouter les tracks locaux
-        if (localStream) {
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-        }
-        
-        // Gestion des tracks distants
-        peerConnection.ontrack = (event) => {
-            console.log('📹 Track distant reçu de:', targetUserId);
-            if (event.streams && event.streams[0]) {
-                addRemoteVideo(targetUserId, event.streams[0]);
-            }
-        };
-        
-        // Gestion des candidats ICE
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.emit('webrtc-ice-candidate', {
-                    to: targetUserId,
-                    candidate: event.candidate,
-                    roomId: currentRoom
-                });
-            }
-        };
-        
-        // Surveillance de la connexion
-        peerConnection.onconnectionstatechange = () => {
-            const state = peerConnection.connectionState;
-            console.log(`🔗 État connexion ${targetUserId}: ${state}`);
-            
-            if (state === 'connected') {
-                console.log(`🎉 Connexion WebRTC établie avec ${targetUserId}`);
-                peerStates.set(targetUserId, 'connected');
-            } else if (state === 'failed') {
-                console.log(`❌ Échec connexion avec ${targetUserId}`);
-                setTimeout(() => {
-                    if (peers.has(targetUserId)) {
-                        restartWebRTCConnection(targetUserId);
-                    }
-                }, 3000);
-            }
-        };
-        
-        // Créer l'offre
-        console.log('🔧 Création de l\'offre...');
-        const offer = await peerConnection.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true
-        });
-        
-        // Définir la description locale
-        console.log('🔧 Définition de l\'offre locale...');
-        await peerConnection.setLocalDescription(offer);
-        console.log('✅ Offre locale définie');
-        
-        peerStates.set(targetUserId, 'offered');
-        
-        // Envoyer l'offre
-        socket.emit('webrtc-offer', {
-            to: targetUserId,
-            offer: offer,
-            roomId: currentRoom
-        });
-        
-        console.log('✅ Offre envoyée à:', targetUserId);
-        
     } catch (error) {
-        console.error('❌ Erreur démarrage WebRTC:', error);
-        cleanupWebRTC(targetUserId);
+        console.error('❌ Erreur création meeting:', error);
+        alert('❌ Erreur de création de réunion: ' + error.message);
+    } finally {
+        createBtn.innerHTML = originalText;
+        createBtn.disabled = false;
     }
 }
 
-async function handleWebRTCOffer(fromUserId, offer) {
-    console.log('📨 Traitement offre de:', fromUserId);
+async function joinMeeting() {
+    console.log('🔗 Connexion réunion...');
+    const userName = document.getElementById('userName').value.trim();
+    const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
     
-    // Nettoyer toute connexion existante
-    if (peers.has(fromUserId)) {
-        cleanupWebRTC(fromUserId);
-    }
-    
-    try {
-        const peerConnection = new RTCPeerConnection(rtcConfiguration);
-        peers.set(fromUserId, peerConnection);
-        peerStates.set(fromUserId, 'processing-offer');
-        
-        // Ajouter les tracks locaux
-        if (localStream) {
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-        }
-        
-        // Gestion des tracks distants
-        peerConnection.ontrack = (event) => {
-            console.log('📹 Track distant reçu de:', fromUserId);
-            if (event.streams && event.streams[0]) {
-                addRemoteVideo(fromUserId, event.streams[0]);
-            }
-        };
-        
-        // Gestion des candidats ICE
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.emit('webrtc-ice-candidate', {
-                    to: fromUserId,
-                    candidate: event.candidate,
-                    roomId: currentRoom
-                });
-            }
-        };
-        
-        // IMPORTANT: Définir d'abord la description distante
-        console.log('🔧 Définition de l\'offre distante...');
-        await peerConnection.setRemoteDescription(offer);
-        console.log('✅ Offre distante définie');
-        
-        // Créer la réponse
-        console.log('🔧 Création de la réponse...');
-        const answer = await peerConnection.createAnswer();
-        
-        // IMPORTANT: Définir la description locale AVANT d'envoyer
-        console.log('🔧 Définition de la réponse locale...');
-        await peerConnection.setLocalDescription(answer);
-        console.log('✅ Réponse locale définie');
-        
-        peerStates.set(fromUserId, 'answered');
-        
-        // Envoyer la réponse
-        socket.emit('webrtc-answer', {
-            to: fromUserId,
-            answer: answer,
-            roomId: currentRoom
-        });
-        
-        console.log('✅ Réponse envoyée à:', fromUserId);
-        
-    } catch (error) {
-        console.error('❌ Erreur traitement offre:', error);
-        cleanupWebRTC(fromUserId);
-    }
-}
-
-async function handleWebRTCAnswer(fromUserId, answer) {
-    console.log('📨 Traitement réponse de:', fromUserId);
-    
-    const peerConnection = peers.get(fromUserId);
-    if (!peerConnection) {
-        console.error('❌ Aucune PeerConnection pour:', fromUserId);
+    if (!userName) {
+        alert('Veuillez entrer votre nom');
         return;
     }
     
-    const currentState = peerConnection.signalingState;
-    console.log('📊 État signalisation:', currentState);
+    if (!roomCode) {
+        alert('Veuillez entrer un code de réunion');
+        return;
+    }
+    
+    userData = {
+        name: userName,
+        isHost: false,
+        userId: currentUser.id,
+        email: currentUser.email,
+        planType: currentUser.plan_type,
+        socketId: null
+    };
+    
+    currentRoom = roomCode;
     
     try {
-        // Vérifier si nous sommes dans le bon état pour accepter la réponse
-        if (currentState === 'have-local-offer') {
-            console.log('🔧 Définition de la réponse distante...');
-            await peerConnection.setRemoteDescription(answer);
-            console.log('✅ Réponse distante définie');
-            peerStates.set(fromUserId, 'connected');
-        } else {
-            console.warn('⚠️ État inattendu:', currentState, '- Nettoyage et reconnexion...');
-            cleanupWebRTC(fromUserId);
-            // Réessayer la connexion
+        await initializeMedia();
+        initializeSocket();
+        console.log('✅ Tentative de rejoindre:', roomCode);
+    } catch (error) {
+        console.error('❌ Erreur connexion réunion:', error);
+        alert('Erreur lors de la connexion à la réunion');
+    }
+}
+
+function initializeSocket() {
+    console.log('🔌 Connexion au backend...');
+
+    socket = io(API_BASE, {
+        transports: ['websocket', 'polling'],
+        timeout: 60000,
+        pingTimeout: 30000,
+        pingInterval: 25000
+    });
+
+    socket.on('connect', () => {
+        console.log('✅ Connecté au backend');
+        updateConnectionStatus('online');
+        
+        userData.socketId = socket.id;
+        
+        socket.emit('join-room', {
+            roomId: currentRoom,
+            userData: userData
+        });
+        
+        showMainInterface();
+        addChatMessage('Système', '🔗 Connecté à la réunion ' + currentRoom, 'system', false);
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('🔌 Déconnecté:', reason);
+        updateConnectionStatus('offline');
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('❌ Erreur de connexion:', error);
+        updateConnectionStatus('offline');
+        addChatMessage('Système', '❌ Erreur de connexion au serveur', 'system', false);
+    });
+
+    // Événements WebRTC - UTILISATION DU MANAGER
+    socket.on('webrtc-offer', (data) => {
+        console.log('📨 Offre WebRTC reçue de:', data.from);
+        if (data.from !== socket.id) {
+            webRTCManager.handleOffer(data.from, data.offer, localStream);
+        }
+    });
+
+    socket.on('webrtc-answer', (data) => {
+        console.log('📨 Réponse WebRTC reçue de:', data.from);
+        if (data.from !== socket.id) {
+            webRTCManager.handleAnswer(data.from, data.answer);
+        }
+    });
+
+    socket.on('webrtc-ice-candidate', (data) => {
+        console.log('🧊 Candidat ICE reçu de:', data.from);
+        if (data.from !== socket.id) {
+            webRTCManager.handleIceCandidate(data.from, data.candidate);
+        }
+    });
+
+    socket.on('user-joined', (data) => {
+        console.log('👤 Utilisateur rejoint:', data.userData.name);
+        addChatMessage('Système', '👤 ' + data.userData.name + ' a rejoint la réunion', 'system', false);
+        addParticipant(data.userId, data.userData);
+        
+        if (data.userId !== socket.id) {
             setTimeout(() => {
-                if (socket && socket.connected) {
-                    startWebRTC(fromUserId);
-                }
+                webRTCManager.startCall(data.userId, localStream);
             }, 2000);
         }
-    } catch (error) {
-        console.error('❌ Erreur traitement réponse:', error);
+    });
+
+    socket.on('user-left', (data) => {
+        console.log('👋 Utilisateur parti:', data.userData.name);
+        addChatMessage('Système', '👋 ' + data.userData.name + ' a quitté la réunion', 'system', false);
+        removeParticipant(data.userId);
+        webRTCManager.cleanup(data.userId);
+    });
+
+    socket.on('existing-users', (users) => {
+        console.log('📋 Utilisateurs existants:', users.length);
         
-        if (error.toString().includes('stable')) {
-            console.log('🔄 État stable détecté - connexion probablement déjà établie');
-            // Vérifier si la connexion est déjà établie
-            if (peerConnection.connectionState === 'connected') {
-                console.log('✅ Connexion déjà établie - ignore l\'erreur');
-            } else {
-                console.log('🔁 Reconnexion nécessaire...');
-                cleanupWebRTC(fromUserId);
+        users.forEach((user, index) => {
+            if (user.userId !== socket.id) {
+                addParticipant(user.userId, user.userData);
+                
+                const delay = 2000 + (index * 2000);
                 setTimeout(() => {
-                    if (socket && socket.connected) {
-                        startWebRTC(fromUserId);
-                    }
-                }, 3000);
+                    webRTCManager.startCall(user.userId, localStream);
+                }, delay);
             }
+        });
+    });
+
+    socket.on('chat-message', (data) => {
+        console.log('💬 Message reçu:', data);
+        addChatMessage(data.userName, data.message, data.userId, false);
+    });
+}
+
+// =============================================
+// FONCTIONS UTILITAIRES
+// =============================================
+
+function updateConnectionStatus(status) {
+    const statusElement = document.getElementById('connectionStatus');
+    if (!statusElement) return;
+    
+    const statusText = statusElement.querySelector('.status-text');
+    if (!statusText) return;
+    
+    statusElement.className = `status-indicator status-${status}`;
+    statusText.textContent = 
+        status === 'online' ? 'En ligne' :
+        status === 'offline' ? 'Hors ligne' : 'Connexion...';
+}
+
+function updateRoomInfo() {
+    if (currentRoom) {
+        document.getElementById('currentRoomCode').textContent = currentRoom;
+        document.getElementById('roomInfo').innerHTML = `<strong>Salle:</strong> ${currentRoom}`;
+    }
+}
+
+function leaveMeeting() {
+    if (confirm('Voulez-vous vraiment quitter la réunion ?')) {
+        stopTimeLimitCounter();
+        
+        if (isRecording) stopRecording();
+        if (isSharingScreen) stopScreenShare();
+        
+        // Nettoyer toutes les connexions WebRTC
+        webRTCManager.peers.forEach((pc, userId) => {
+            webRTCManager.cleanup(userId);
+        });
+        
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        
+        if (socket) {
+            socket.emit('leave-room', {
+                roomId: currentRoom,
+                userData: userData
+            });
+            socket.disconnect();
+            socket = null;
+        }
+        
+        currentRoom = null;
+        userData = null;
+        showJoinScreen();
+    }
+}
+
+function logout() {
+    if (currentRoom) leaveMeeting();
+    
+    currentUser = null;
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    showAuthScreen();
+}
+
+// =============================================
+// GESTION DU TEMPS
+// =============================================
+
+function startTimeLimitCounter() {
+    const timeLimitIndicator = document.getElementById('timeLimitIndicator');
+    const timeRemainingElement = document.getElementById('timeRemaining');
+    
+    if (!timeLimitIndicator || !timeRemainingElement) return;
+    
+    timeLimitIndicator.classList.remove('hidden');
+    
+    timeLimitTimer = setInterval(() => {
+        if (remainingTime > 0) {
+            remainingTime--;
+            updateTimeDisplay(timeRemainingElement, remainingTime);
+            
+            if (remainingTime === 5 * 60) {
+                timeLimitIndicator.classList.add('warning');
+                addChatMessage('Système', '⚠️ Attention: Il reste 5 minutes avant la fin de la réunion', 'system', false);
+            }
+            
+            if (remainingTime === 60) {
+                addChatMessage('Système', '⚠️ Dernière minute ! La réunion va bientôt se terminer', 'system', false);
+            }
+            
         } else {
-            cleanupWebRTC(fromUserId);
+            clearInterval(timeLimitTimer);
+            timeLimitIndicator.innerHTML = '<div>⏰ Temps écoulé</div><div>Déconnexion automatique...</div>';
+            
+            setTimeout(() => {
+                leaveMeeting();
+                alert('⏰ La réunion a atteint la limite de 40 minutes (Formule Basique).');
+            }, 3000);
+        }
+    }, 1000);
+}
+
+function updateTimeDisplay(element, seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    element.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function stopTimeLimitCounter() {
+    if (timeLimitTimer) {
+        clearInterval(timeLimitTimer);
+        timeLimitTimer = null;
+    }
+    const timeLimitIndicator = document.getElementById('timeLimitIndicator');
+    if (timeLimitIndicator) {
+        timeLimitIndicator.classList.add('hidden');
+    }
+}
+
+// =============================================
+// CHAT ET PARTICIPANTS
+// =============================================
+
+function sendMessage() {
+    const messageInput = document.getElementById('chatInput');
+    const message = messageInput.value.trim();
+    
+    if (message && socket) {
+        socket.emit('chat-message', {
+            roomId: currentRoom,
+            message: message,
+            userName: userData.name,
+            userId: socket.id
+        });
+        
+        addChatMessage(userData.name, message, socket.id, true);
+        messageInput.value = '';
+        messageInput.focus();
+    }
+}
+
+function addChatMessage(userName, message, userId, isOwn) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
+    
+    messageDiv.innerHTML = `
+        <div class="message-header">${userName}</div>
+        <div>${message}</div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addParticipant(userId, userData) {
+    const participantsList = document.getElementById('participantsList');
+    if (!participantsList) return;
+    
+    if (document.getElementById(`participant-${userId}`)) return;
+    
+    const participant = document.createElement('div');
+    participant.className = 'participant';
+    participant.id = `participant-${userId}`;
+    
+    participant.innerHTML = `
+        <div class="participant-avatar">${userData.name.charAt(0).toUpperCase()}</div>
+        <div class="participant-info">
+            <div class="participant-name">${userData.name}</div>
+            <div class="participant-role">${userData.isHost ? 'Hôte' : 'Participant'}</div>
+        </div>
+    `;
+    
+    participantsList.appendChild(participant);
+    updateParticipantsCount();
+}
+
+function removeParticipant(userId) {
+    const participant = document.getElementById(`participant-${userId}`);
+    if (participant) participant.remove();
+    updateParticipantsCount();
+}
+
+function updateParticipantsList() {
+    const participantsList = document.getElementById('participantsList');
+    if (!participantsList) return;
+    
+    participantsList.innerHTML = '';
+    
+    if (userData) {
+        const participant = document.createElement('div');
+        participant.className = 'participant';
+        participant.innerHTML = `
+            <div class="participant-avatar">${userData.name.charAt(0).toUpperCase()}</div>
+            <div class="participant-info">
+                <div class="participant-name">${userData.name} (Vous)</div>
+                <div class="participant-role">${userData.isHost ? 'Hôte' : 'Participant'}</div>
+            </div>
+        `;
+        participantsList.appendChild(participant);
+    }
+    
+    updateParticipantsCount();
+}
+
+function updateParticipantsCount() {
+    const participantsList = document.getElementById('participantsList');
+    const count = participantsList ? participantsList.children.length : 0;
+    
+    document.getElementById('participantsCount').textContent = count;
+    document.getElementById('participantCount').textContent = count;
+}
+
+// =============================================
+// MÉDIAS ET VIDÉO
+// =============================================
+
+async function initializeMedia() {
+    try {
+        console.log('🎥 Demande d\'accès médias...');
+        
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
+        
+        console.log('✅ Médias obtenus avec succès');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erreur accès médias:', error);
+        alert('❌ Impossible d\'accéder à la caméra/micro. Vérifiez les permissions du navigateur.');
+        return false;
+    }
+}
+
+function addLocalVideo() {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+    
+    videoGrid.innerHTML = '';
+    
+    const videoItem = document.createElement('div');
+    videoItem.className = 'video-item self';
+    videoItem.id = 'localVideo';
+    videoItem.innerHTML = `
+        <video autoplay muted playsinline></video>
+        <div class="video-overlay">
+            <span class="user-name">${userData.name} (Vous)</span>
+            <span class="user-badge">${userData.isHost ? 'Hôte' : 'Participant'}</span>
+        </div>
+    `;
+    
+    const videoElement = videoItem.querySelector('video');
+    if (localStream) {
+        videoElement.srcObject = localStream;
+    }
+    
+    videoGrid.appendChild(videoItem);
+}
+
+function addRemoteVideo(userId, remoteStream) {
+    console.log('🎥 Ajout vidéo distante pour:', userId);
+    
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+    
+    const existingVideo = document.getElementById(`remoteVideo-${userId}`);
+    if (existingVideo) {
+        existingVideo.remove();
+    }
+    
+    const videoItem = document.createElement('div');
+    videoItem.className = 'video-item';
+    videoItem.id = `remoteVideo-${userId}`;
+    
+    let userName = 'Participant';
+    const participantElement = document.getElementById(`participant-${userId}`);
+    if (participantElement) {
+        const nameElement = participantElement.querySelector('.participant-name');
+        if (nameElement) {
+            userName = nameElement.textContent.replace(' (Vous)', '');
+        }
+    }
+    
+    videoItem.innerHTML = `
+        <video autoplay playsinline></video>
+        <div class="video-overlay">
+            <span class="user-name">${userName}</span>
+            <span class="user-badge">Distant</span>
+        </div>
+    `;
+    
+    const videoElement = videoItem.querySelector('video');
+    videoElement.srcObject = remoteStream;
+    
+    videoGrid.appendChild(videoItem);
+}
+
+function toggleAudio() {
+    if (localStream) {
+        const audioTracks = localStream.getAudioTracks();
+        if (audioTracks.length > 0) {
+            isAudioMuted = !isAudioMuted;
+            audioTracks[0].enabled = !isAudioMuted;
+            
+            const muteBtn = document.getElementById('muteBtn');
+            if (muteBtn) {
+                if (isAudioMuted) {
+                    muteBtn.classList.add('muted');
+                    muteBtn.innerHTML = '🔇';
+                } else {
+                    muteBtn.classList.remove('muted');
+                    muteBtn.innerHTML = '🎤';
+                }
+            }
         }
     }
 }
 
-async function handleWebRTCIceCandidate(fromUserId, candidate) {
-    try {
-        const peerConnection = peers.get(fromUserId);
-        
-        if (!peerConnection) {
-            // Mettre en file d'attente
-            if (!iceCandidateQueue.has(fromUserId)) {
-                iceCandidateQueue.set(fromUserId, []);
+function toggleVideo() {
+    if (localStream) {
+        const videoTracks = localStream.getVideoTracks();
+        if (videoTracks.length > 0) {
+            isVideoOff = !isVideoOff;
+            videoTracks[0].enabled = !isVideoOff;
+            
+            const videoBtn = document.getElementById('videoBtn');
+            if (videoBtn) {
+                if (isVideoOff) {
+                    videoBtn.classList.add('off');
+                    videoBtn.innerHTML = '📷';
+                } else {
+                    videoBtn.classList.remove('off');
+                    videoBtn.innerHTML = '📹';
+                }
             }
-            iceCandidateQueue.get(fromUserId).push(candidate);
+        }
+    }
+}
+
+// =============================================
+// ENREGISTREMENT ET PARTAGE D'ÉCRAN
+// =============================================
+
+async function toggleRecording() {
+    if (!isRecording) {
+        await startRecording();
+    } else {
+        await stopRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        if (currentUser && currentUser.plan_type === 'basic') {
+            alert('❌ L\'enregistrement n\'est disponible que pour les formules Professionnelle et Entreprise');
             return;
         }
-        
-        if (candidate && peerConnection.remoteDescription) {
-            await peerConnection.addIceCandidate(candidate);
+
+        const streamToRecord = isSharingScreen ? screenStream : localStream;
+
+        if (!streamToRecord) {
+            alert('❌ Aucun flux disponible pour l\'enregistrement');
+            return;
         }
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(streamToRecord, {
+            mimeType: 'video/webm;codecs=vp9,opus'
+        });
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            saveRecording(blob);
+        };
+
+        mediaRecorder.start(1000);
+        isRecording = true;
+        recordingStartTime = Date.now();
+
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            recordBtn.classList.add('recording');
+            recordBtn.innerHTML = '⏹️';
+        }
+
+        showRecordingIndicator();
+        startRecordingTimer();
+
+        console.log('✅ Enregistrement démarré');
+
     } catch (error) {
-        console.log('⚠️ Candidat ICE ignoré:', error.message);
+        console.error('❌ Erreur démarrage enregistrement:', error);
+        alert('❌ Erreur lors du démarrage de l\'enregistrement');
     }
 }
 
-function processQueuedIceCandidates(userId, peerConnection) {
-    if (iceCandidateQueue.has(userId)) {
-        const queue = iceCandidateQueue.get(userId);
-        console.log(`🔄 Traitement de ${queue.length} candidats ICE en attente...`);
+async function stopRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = '⏺️';
+        }
+
+        stopRecordingTimer();
+        setTimeout(() => {
+            hideRecordingIndicator();
+        }, 2000);
+
+        console.log('✅ Enregistrement arrêté');
+    }
+}
+
+function saveRecording(blob) {
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.href = url;
+        a.download = `benelvisio-recording-${timestamp}.webm`;
+        a.style.display = 'none';
         
-        queue.forEach(async (candidate) => {
-            try {
-                await peerConnection.addIceCandidate(candidate);
-                console.log('✅ Candidat en attente ajouté');
-            } catch (e) {
-                console.log('⚠️ Candidat en attente ignoré:', e.message);
-            }
-        });
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         
-        iceCandidateQueue.delete(userId);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        
+        console.log('✅ Enregistrement sauvegardé');
+        
+    } catch (error) {
+        console.error('❌ Erreur sauvegarde enregistrement:', error);
+        alert('❌ Erreur lors de la sauvegarde de l\'enregistrement');
     }
 }
 
-function restartWebRTCConnection(userId) {
-    console.log('🔄 Redémarrage connexion WebRTC pour:', userId);
-    cleanupWebRTC(userId);
-    setTimeout(() => {
-        if (currentRoom && socket && socket.connected) {
-            startWebRTC(userId);
-        }
-    }, 2000);
+function showRecordingIndicator() {
+    document.getElementById('recordingIndicator').classList.remove('hidden');
 }
 
-function cleanupWebRTC(userId) {
-    console.log('🧹 Nettoyage WebRTC pour:', userId);
-    
-    const peerConnection = peers.get(userId);
-    if (peerConnection) {
-        try {
-            // Désactiver tous les gestionnaires d'événements
-            peerConnection.onicecandidate = null;
-            peerConnection.ontrack = null;
-            peerConnection.onconnectionstatechange = null;
-            peerConnection.oniceconnectionstatechange = null;
-            peerConnection.onsignalingstatechange = null;
-            
-            // Fermer la connexion
-            peerConnection.close();
-        } catch (e) {
-            console.log('⚠️ Erreur lors du nettoyage:', e.message);
-        }
+function hideRecordingIndicator() {
+    document.getElementById('recordingIndicator').classList.add('hidden');
+}
+
+function startRecordingTimer() {
+    const timerElement = document.getElementById('recordingTimer');
+    if (!timerElement) return;
+
+    recordingTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+function stopRecordingTimer() {
+    if (recordingTimer) {
+        clearInterval(recordingTimer);
+        recordingTimer = null;
     }
     
-    // Nettoyer les maps
-    peers.delete(userId);
-    peerStates.delete(userId);
-    iceCandidateQueue.delete(userId);
-    
-    // Supprimer l'élément vidéo
-    const remoteVideo = document.getElementById(`remoteVideo-${userId}`);
-    if (remoteVideo) {
-        remoteVideo.remove();
+    const timerElement = document.getElementById('recordingTimer');
+    if (timerElement) {
+        timerElement.textContent = '00:00';
     }
 }
 
-        function addRemoteVideo(userId, remoteStream) {
-            console.log('🎥 Ajout vidéo distante pour:', userId);
-            
-            const videoGrid = document.getElementById('videoGrid');
-            if (!videoGrid) return;
-            
-            const existingVideo = document.getElementById(`remoteVideo-${userId}`);
-            if (existingVideo) {
-                existingVideo.remove();
-            }
-            
-            const videoItem = document.createElement('div');
-            videoItem.className = 'video-item';
-            videoItem.id = `remoteVideo-${userId}`;
-            
-            let userName = 'Participant';
-            const participantElement = document.getElementById(`participant-${userId}`);
-            if (participantElement) {
-                const nameElement = participantElement.querySelector('.participant-name');
-                if (nameElement) {
-                    userName = nameElement.textContent.replace(' (Vous)', '');
-                }
-            }
-            
-            videoItem.innerHTML = `
-                <video autoplay playsinline></video>
-                <div class="video-overlay">
-                    <span class="user-name">${userName}</span>
-                    <span class="user-badge">Distant</span>
-                </div>
-            `;
-            
-            const videoElement = videoItem.querySelector('video');
-            videoElement.srcObject = remoteStream;
-            
-            videoGrid.appendChild(videoItem);
-        }
+async function toggleScreenShare() {
+    if (!isSharingScreen) {
+        await startScreenShare();
+    } else {
+        await stopScreenShare();
+    }
+}
 
-        // =============================================
-        // FONCTIONS UTILITAIRES
-        // =============================================
-
-        function updateConnectionStatus(status) {
-            const statusElement = document.getElementById('connectionStatus');
-            if (!statusElement) return;
-            
-            const statusText = statusElement.querySelector('.status-text');
-            if (!statusText) return;
-            
-            statusElement.className = `status-indicator status-${status}`;
-            statusText.textContent = 
-                status === 'online' ? 'En ligne' :
-                status === 'offline' ? 'Hors ligne' : 'Connexion...';
-        }
-
-        function updateRoomInfo() {
-            if (currentRoom) {
-                document.getElementById('currentRoomCode').textContent = currentRoom;
-                document.getElementById('roomInfo').innerHTML = `<strong>Salle:</strong> ${currentRoom}`;
-            }
-        }
-
-        function leaveMeeting() {
-            if (confirm('Voulez-vous vraiment quitter la réunion ?')) {
-                stopTimeLimitCounter();
-                
-                if (isRecording) stopRecording();
-                if (isSharingScreen) stopScreenShare();
-                
-                peers.forEach((peerConnection, userId) => {
-                    cleanupWebRTC(userId);
-                });
-                peers.clear();
-                
-                if (localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                    localStream = null;
-                }
-                
-                if (socket) {
-                    socket.emit('leave-room', {
-                        roomId: currentRoom,
-                        userData: userData
-                    });
-                    socket.disconnect();
-                    socket = null;
-                }
-                
-                currentRoom = null;
-                userData = null;
-                showJoinScreen();
-            }
-        }
-
-        function logout() {
-            if (currentRoom) leaveMeeting();
-            
-            currentUser = null;
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
-            showAuthScreen();
-        }
-
-        // =============================================
-        // GESTION DU TEMPS
-        // =============================================
-
-        function startTimeLimitCounter() {
-            const timeLimitIndicator = document.getElementById('timeLimitIndicator');
-            const timeRemainingElement = document.getElementById('timeRemaining');
-            
-            if (!timeLimitIndicator || !timeRemainingElement) return;
-            
-            timeLimitIndicator.classList.remove('hidden');
-            
-            timeLimitTimer = setInterval(() => {
-                if (remainingTime > 0) {
-                    remainingTime--;
-                    updateTimeDisplay(timeRemainingElement, remainingTime);
-                    
-                    if (remainingTime === 5 * 60) {
-                        timeLimitIndicator.classList.add('warning');
-                        addChatMessage('Système', '⚠️ Attention: Il reste 5 minutes avant la fin de la réunion', 'system', false);
-                    }
-                    
-                    if (remainingTime === 60) {
-                        addChatMessage('Système', '⚠️ Dernière minute ! La réunion va bientôt se terminer', 'system', false);
-                    }
-                    
-                } else {
-                    clearInterval(timeLimitTimer);
-                    timeLimitIndicator.innerHTML = '<div>⏰ Temps écoulé</div><div>Déconnexion automatique...</div>';
-                    
-                    setTimeout(() => {
-                        leaveMeeting();
-                        alert('⏰ La réunion a atteint la limite de 40 minutes (Formule Basique).');
-                    }, 3000);
-                }
-            }, 1000);
-        }
-
-        function updateTimeDisplay(element, seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            element.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function stopTimeLimitCounter() {
-            if (timeLimitTimer) {
-                clearInterval(timeLimitTimer);
-                timeLimitTimer = null;
-            }
-            const timeLimitIndicator = document.getElementById('timeLimitIndicator');
-            if (timeLimitIndicator) {
-                timeLimitIndicator.classList.add('hidden');
-            }
-        }
-
-        // =============================================
-        // CHAT ET PARTICIPANTS
-        // =============================================
-
-        function sendMessage() {
-            const messageInput = document.getElementById('chatInput');
-            const message = messageInput.value.trim();
-            
-            if (message && socket) {
-                socket.emit('chat-message', {
-                    roomId: currentRoom,
-                    message: message,
-                    userName: userData.name,
-                    userId: socket.id
-                });
-                
-                addChatMessage(userData.name, message, socket.id, true);
-                messageInput.value = '';
-                messageInput.focus();
-            }
-        }
-
-        function addChatMessage(userName, message, userId, isOwn) {
-            const chatMessages = document.getElementById('chatMessages');
-            if (!chatMessages) return;
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
-            
-            messageDiv.innerHTML = `
-                <div class="message-header">${userName}</div>
-                <div>${message}</div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function addParticipant(userId, userData) {
-            const participantsList = document.getElementById('participantsList');
-            if (!participantsList) return;
-            
-            if (document.getElementById(`participant-${userId}`)) return;
-            
-            const participant = document.createElement('div');
-            participant.className = 'participant';
-            participant.id = `participant-${userId}`;
-            
-            participant.innerHTML = `
-                <div class="participant-avatar">${userData.name.charAt(0).toUpperCase()}</div>
-                <div class="participant-info">
-                    <div class="participant-name">${userData.name}</div>
-                    <div class="participant-role">${userData.isHost ? 'Hôte' : 'Participant'}</div>
-                </div>
-            `;
-            
-            participantsList.appendChild(participant);
-            updateParticipantsCount();
-        }
-
-        function removeParticipant(userId) {
-            const participant = document.getElementById(`participant-${userId}`);
-            if (participant) participant.remove();
-            updateParticipantsCount();
-        }
-
-        function updateParticipantsList() {
-            const participantsList = document.getElementById('participantsList');
-            if (!participantsList) return;
-            
-            participantsList.innerHTML = '';
-            
-            if (userData) {
-                const participant = document.createElement('div');
-                participant.className = 'participant';
-                participant.innerHTML = `
-                    <div class="participant-avatar">${userData.name.charAt(0).toUpperCase()}</div>
-                    <div class="participant-info">
-                        <div class="participant-name">${userData.name} (Vous)</div>
-                        <div class="participant-role">${userData.isHost ? 'Hôte' : 'Participant'}</div>
-                    </div>
-                `;
-                participantsList.appendChild(participant);
-            }
-            
-            updateParticipantsCount();
-        }
-
-        function updateParticipantsCount() {
-            const participantsList = document.getElementById('participantsList');
-            const count = participantsList ? participantsList.children.length : 0;
-            
-            document.getElementById('participantsCount').textContent = count;
-            document.getElementById('participantCount').textContent = count;
-        }
-
-        // =============================================
-        // MÉDIAS ET VIDÉO
-        // =============================================
-
-        async function initializeMedia() {
-            try {
-                console.log('🎥 Demande d\'accès médias...');
-                
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30 }
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                });
-                
-                console.log('✅ Médias obtenus avec succès');
-                return true;
-                
-            } catch (error) {
-                console.error('❌ Erreur accès médias:', error);
-                alert('❌ Impossible d\'accéder à la caméra/micro. Vérifiez les permissions du navigateur.');
-                return false;
-            }
-        }
-
-        function addLocalVideo() {
-            const videoGrid = document.getElementById('videoGrid');
-            if (!videoGrid) return;
-            
-            videoGrid.innerHTML = '';
-            
-            const videoItem = document.createElement('div');
-            videoItem.className = 'video-item self';
-            videoItem.id = 'localVideo';
-            videoItem.innerHTML = `
-                <video autoplay muted playsinline></video>
-                <div class="video-overlay">
-                    <span class="user-name">${userData.name} (Vous)</span>
-                    <span class="user-badge">${userData.isHost ? 'Hôte' : 'Participant'}</span>
-                </div>
-            `;
-            
-            const videoElement = videoItem.querySelector('video');
-            if (localStream) {
-                videoElement.srcObject = localStream;
-            }
-            
-            videoGrid.appendChild(videoItem);
-        }
-
-        function toggleAudio() {
-            if (localStream) {
-                const audioTracks = localStream.getAudioTracks();
-                if (audioTracks.length > 0) {
-                    isAudioMuted = !isAudioMuted;
-                    audioTracks[0].enabled = !isAudioMuted;
-                    
-                    const muteBtn = document.getElementById('muteBtn');
-                    if (muteBtn) {
-                        if (isAudioMuted) {
-                            muteBtn.classList.add('muted');
-                            muteBtn.innerHTML = '🔇';
-                        } else {
-                            muteBtn.classList.remove('muted');
-                            muteBtn.innerHTML = '🎤';
-                        }
-                    }
-                }
-            }
-        }
-
-        function toggleVideo() {
-            if (localStream) {
-                const videoTracks = localStream.getVideoTracks();
-                if (videoTracks.length > 0) {
-                    isVideoOff = !isVideoOff;
-                    videoTracks[0].enabled = !isVideoOff;
-                    
-                    const videoBtn = document.getElementById('videoBtn');
-                    if (videoBtn) {
-                        if (isVideoOff) {
-                            videoBtn.classList.add('off');
-                            videoBtn.innerHTML = '📷';
-                        } else {
-                            videoBtn.classList.remove('off');
-                            videoBtn.innerHTML = '📹';
-                        }
-                    }
-                }
-            }
-        }
-
-        // =============================================
-        // ENREGISTREMENT ET PARTAGE D'ÉCRAN
-        // =============================================
-
-        async function toggleRecording() {
-            if (!isRecording) {
-                await startRecording();
-            } else {
-                await stopRecording();
-            }
-        }
-
-        async function startRecording() {
-            try {
-                if (currentUser && currentUser.plan_type === 'basic') {
-                    alert('❌ L\'enregistrement n\'est disponible que pour les formules Professionnelle et Entreprise');
-                    return;
-                }
-
-                const streamToRecord = isSharingScreen ? screenStream : localStream;
-
-                if (!streamToRecord) {
-                    alert('❌ Aucun flux disponible pour l\'enregistrement');
-                    return;
-                }
-
-                recordedChunks = [];
-                mediaRecorder = new MediaRecorder(streamToRecord, {
-                    mimeType: 'video/webm;codecs=vp9,opus'
-                });
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        recordedChunks.push(event.data);
-                    }
-                };
-
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                    saveRecording(blob);
-                };
-
-                mediaRecorder.start(1000);
-                isRecording = true;
-                recordingStartTime = Date.now();
-
-                const recordBtn = document.getElementById('recordBtn');
-                if (recordBtn) {
-                    recordBtn.classList.add('recording');
-                    recordBtn.innerHTML = '⏹️';
-                }
-
-                showRecordingIndicator();
-                startRecordingTimer();
-
-                console.log('✅ Enregistrement démarré');
-
-            } catch (error) {
-                console.error('❌ Erreur démarrage enregistrement:', error);
-                alert('❌ Erreur lors du démarrage de l\'enregistrement');
-            }
-        }
-
-        async function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
-                isRecording = false;
-
-                const recordBtn = document.getElementById('recordBtn');
-                if (recordBtn) {
-                    recordBtn.classList.remove('recording');
-                    recordBtn.innerHTML = '⏺️';
-                }
-
-                stopRecordingTimer();
-                setTimeout(() => {
-                    hideRecordingIndicator();
-                }, 2000);
-
-                console.log('✅ Enregistrement arrêté');
-            }
-        }
-
-        function saveRecording(blob) {
-            try {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                a.href = url;
-                a.download = `benelvisio-recording-${timestamp}.webm`;
-                a.style.display = 'none';
-                
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                
-                console.log('✅ Enregistrement sauvegardé');
-                
-            } catch (error) {
-                console.error('❌ Erreur sauvegarde enregistrement:', error);
-                alert('❌ Erreur lors de la sauvegarde de l\'enregistrement');
-            }
-        }
-
-        function showRecordingIndicator() {
-            document.getElementById('recordingIndicator').classList.remove('hidden');
-        }
-
-        function hideRecordingIndicator() {
-            document.getElementById('recordingIndicator').classList.add('hidden');
-        }
-
-        function startRecordingTimer() {
-            const timerElement = document.getElementById('recordingTimer');
-            if (!timerElement) return;
-
-            recordingTimer = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-                const minutes = Math.floor(elapsed / 60);
-                const seconds = elapsed % 60;
-                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }, 1000);
-        }
-
-        function stopRecordingTimer() {
-            if (recordingTimer) {
-                clearInterval(recordingTimer);
-                recordingTimer = null;
-            }
-            
-            const timerElement = document.getElementById('recordingTimer');
-            if (timerElement) {
-                timerElement.textContent = '00:00';
-            }
-        }
-
-        async function toggleScreenShare() {
-            if (!isSharingScreen) {
-                await startScreenShare();
-            } else {
-                await stopScreenShare();
-            }
-        }
-
-        async function startScreenShare() {
-            try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                    audio: true
-                });
-
-                const localVideo = document.querySelector('#localVideo video');
-                if (localVideo) {
-                    localVideo.srcObject = screenStream;
-                }
-
-                isSharingScreen = true;
-                const screenShareBtn = document.getElementById('screenShareBtn');
-                if (screenShareBtn) {
-                    screenShareBtn.classList.add('active');
-                    screenShareBtn.innerHTML = '🖥️';
-                }
-
-                screenStream.getVideoTracks()[0].onended = () => {
-                    stopScreenShare();
-                };
-
-                console.log('✅ Partage d\'écran démarré');
-
-            } catch (error) {
-                console.error('❌ Erreur partage d\'écran:', error);
-                alert('❌ Erreur lors du partage d\'écran');
-            }
-        }
-
-        async function stopScreenShare() {
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
-            }
-
-            const localVideo = document.querySelector('#localVideo video');
-            if (localVideo && localStream) {
-                localVideo.srcObject = localStream;
-            }
-
-            isSharingScreen = false;
-            const screenShareBtn = document.getElementById('screenShareBtn');
-            if (screenShareBtn) {
-                screenShareBtn.classList.remove('active');
-                screenShareBtn.innerHTML = '🖥️';
-            }
-
-            console.log('✅ Partage d\'écran arrêté');
-        }
-
-        // =============================================
-        // DÉMARRAGE DE L'APPLICATION
-        // =============================================
-
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Application Benelvisio démarrée');
-            
-            if (typeof MediaRecorder === 'undefined' || 
-                !navigator.mediaDevices || 
-                !navigator.mediaDevices.getUserMedia) {
-                
-                alert('❌ Votre navigateur ne supporte pas toutes les fonctionnalités nécessaires. Utilisez Chrome, Firefox ou Edge récent.');
-                return;
-            }
-            
-            initializeApp();
+async function startScreenShare() {
+    try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true
         });
-    </script>
+
+        const localVideo = document.querySelector('#localVideo video');
+        if (localVideo) {
+            localVideo.srcObject = screenStream;
+        }
+
+        isSharingScreen = true;
+        const screenShareBtn = document.getElementById('screenShareBtn');
+        if (screenShareBtn) {
+            screenShareBtn.classList.add('active');
+            screenShareBtn.innerHTML = '🖥️';
+        }
+
+        screenStream.getVideoTracks()[0].onended = () => {
+            stopScreenShare();
+        };
+
+        console.log('✅ Partage d\'écran démarré');
+
+    } catch (error) {
+        console.error('❌ Erreur partage d\'écran:', error);
+        alert('❌ Erreur lors du partage d\'écran');
+    }
+}
+
+async function stopScreenShare() {
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+    }
+
+    const localVideo = document.querySelector('#localVideo video');
+    if (localVideo && localStream) {
+        localVideo.srcObject = localStream;
+    }
+
+    isSharingScreen = false;
+    const screenShareBtn = document.getElementById('screenShareBtn');
+    if (screenShareBtn) {
+        screenShareBtn.classList.remove('active');
+        screenShareBtn.innerHTML = '🖥️';
+    }
+
+    console.log('✅ Partage d\'écran arrêté');
+}
+
+// =============================================
+// DÉMARRAGE DE L'APPLICATION
+// =============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Application Benelvisio démarrée');
+    
+    if (typeof MediaRecorder === 'undefined' || 
+        !navigator.mediaDevices || 
+        !navigator.mediaDevices.getUserMedia) {
+        
+        alert('❌ Votre navigateur ne supporte pas toutes les fonctionnalités nécessaires. Utilisez Chrome, Firefox ou Edge récent.');
+        return;
+    }
+    
+    initializeApp();
+});
+</script>
 </body>
 </html>
