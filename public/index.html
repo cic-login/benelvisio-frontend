@@ -1739,13 +1739,49 @@
         let remainingTime = 40 * 60;
         let selectedPlan = 'basic';
 
-        // Configuration WebRTC
-        const rtcConfiguration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
+        // Configuration WebRTC améliorée
+const rtcConfiguration = {
+    iceServers: [
+        // Serveurs STUN
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        
+        // Serveurs TURN publics
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject', 
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        // Serveurs TURN alternatifs
+        {
+            urls: 'turn:numb.viagenie.ca',
+            username: 'webrtc@live.com',
+            credential: 'muazkh'
+        },
+        {
+            urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+            username: 'webrtc',
+            credential: 'webrtc'
+        }
+    ],
+    iceTransportPolicy: 'all',
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+    iceCandidatePoolSize: 10
+};
 
         // =============================================
         // INITIALISATION PRINCIPALE
@@ -2206,11 +2242,17 @@
             console.log('🔌 Connexion au backend...');
 
             socket = io(API_BASE, {
-                transports: ['websocket', 'polling'],
-                timeout: 60000,
-                pingTimeout: 30000,
-                pingInterval: 10000
-            });
+        transports: ['websocket', 'polling'],
+        timeout: 60000,
+        pingTimeout: 30000,
+        pingInterval: 25000,
+        connectTimeout: 45000,
+        upgradeTimeout: 30000,
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000
+    });
 
             socket.on('connect', () => {
                 console.log('✅ Connecté au backend');
@@ -2314,163 +2356,302 @@
         // FONCTIONS WEBRTC
         // =============================================
 
-        async function startWebRTC(targetUserId) {
-            console.log('🚀 Démarrage WebRTC avec:', targetUserId);
+        // Variables pour la gestion ICE
+const iceCandidateQueue = new Map();
+let connectionAttempts = new Map();
+const MAX_RETRIES = 3;
+
+async function createPeerConnection(targetUserId) {
+    console.log('🔧 Création PeerConnection pour:', targetUserId);
+    
+    if (peers.has(targetUserId)) {
+        console.log('⚠️ Connexion existe déjà, nettoyage...');
+        cleanupWebRTC(targetUserId);
+    }
+    
+    const peerConnection = new RTCPeerConnection(rtcConfiguration);
+    peers.set(targetUserId, peerConnection);
+    
+    // Ajouter les tracks locaux
+    if (localStream) {
+        localStream.getTracks().forEach(track => {
+            console.log('➕ Ajout track local:', track.kind);
+            peerConnection.addTrack(track, localStream);
+        });
+    }
+    
+    // Gestion des tracks distants
+    peerConnection.ontrack = (event) => {
+        console.log('📹 Track distant reçu de:', targetUserId, event.track.kind);
+        
+        if (event.streams && event.streams[0]) {
+            const remoteStream = event.streams[0];
+            addRemoteVideo(targetUserId, remoteStream);
+            console.log('✅ Stream distant ajouté avec succès');
+        }
+    };
+    
+    // Gestion des candidats ICE
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            console.log('🧊 Candidat ICE généré pour:', targetUserId);
+            socket.emit('webrtc-ice-candidate', {
+                to: targetUserId,
+                candidate: event.candidate,
+                roomId: currentRoom
+            });
+        } else {
+            console.log('✅ Fin des candidats ICE pour:', targetUserId);
+        }
+    };
+    
+    // Surveillance de l'état de connexion
+    peerConnection.onconnectionstatechange = () => {
+        const state = peerConnection.connectionState;
+        console.log(`🔗 État connexion ${targetUserId}: ${state}`);
+        
+        if (state === 'connected') {
+            console.log(`🎉 Connexion WebRTC établie avec ${targetUserId}`);
+            connectionAttempts.set(targetUserId, 0);
+        } else if (state === 'failed' || state === 'disconnected') {
+            console.warn(`⚠️ Problème connexion ${targetUserId}: ${state}`);
             
-            if (peers.has(targetUserId)) {
-                cleanupWebRTC(targetUserId);
-            }
-            
-            try {
-                const peerConnection = new RTCPeerConnection(rtcConfiguration);
-                peers.set(targetUserId, peerConnection);
-                
-                if (localStream) {
-                    localStream.getTracks().forEach(track => {
-                        peerConnection.addTrack(track, localStream);
-                    });
-                }
-                
-                peerConnection.ontrack = (event) => {
-                    console.log('📹 Track distant reçu:', event.track.kind);
-                    if (event.streams && event.streams[0]) {
-                        addRemoteVideo(targetUserId, event.streams[0]);
+            if (connectionAttempts.get(targetUserId) < MAX_RETRIES) {
+                setTimeout(() => {
+                    if (peers.has(targetUserId)) {
+                        console.log('🔄 Reconnexion WebRTC...');
+                        restartWebRTCConnection(targetUserId);
                     }
-                };
-                
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        socket.emit('webrtc-ice-candidate', {
-                            to: targetUserId,
-                            candidate: event.candidate,
-                            roomId: currentRoom
-                        });
-                    }
-                };
-                
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                socket.emit('webrtc-offer', {
-                    to: targetUserId,
-                    offer: peerConnection.localDescription,
-                    roomId: currentRoom
-                });
-                
-                console.log('✅ Offre envoyée à:', targetUserId);
-                
-            } catch (error) {
-                console.error('❌ Erreur démarrage WebRTC:', error);
-                cleanupWebRTC(targetUserId);
+                }, 2000);
             }
         }
+    };
+    
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log(`🧊 État ICE ${targetUserId}:`, peerConnection.iceConnectionState);
+    };
+    
+    return peerConnection;
+}
 
-        async function handleWebRTCOffer(fromUserId, offer) {
-            console.log('📨 Traitement offre de:', fromUserId);
-            
-            if (peers.has(fromUserId)) {
-                cleanupWebRTC(fromUserId);
+async function startWebRTC(targetUserId) {
+    console.log('🚀 Démarrage WebRTC avec:', targetUserId);
+    
+    const attempts = connectionAttempts.get(targetUserId) || 0;
+    if (attempts >= MAX_RETRIES) {
+        console.log('🛑 Maximum de tentatives atteint pour:', targetUserId);
+        return;
+    }
+    connectionAttempts.set(targetUserId, attempts + 1);
+    
+    try {
+        const peerConnection = await createPeerConnection(targetUserId);
+        
+        // Créer l'offre
+        const offer = await peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+        });
+        
+        await peerConnection.setLocalDescription(offer);
+        console.log('✅ Offre locale définie');
+        
+        // Attendre un peu avant d'envoyer
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        socket.emit('webrtc-offer', {
+            to: targetUserId,
+            offer: peerConnection.localDescription,
+            roomId: currentRoom
+        });
+        
+        console.log('✅ Offre envoyée à:', targetUserId);
+        
+    } catch (error) {
+        console.error('❌ Erreur démarrage WebRTC:', error);
+        cleanupWebRTC(targetUserId);
+    }
+}
+
+async function handleWebRTCOffer(fromUserId, offer) {
+    console.log('📨 Traitement offre de:', fromUserId);
+    
+    connectionAttempts.set(fromUserId, 0);
+    
+    try {
+        const peerConnection = await createPeerConnection(fromUserId);
+        
+        // Traiter les candidats ICE en attente
+        processQueuedIceCandidates(fromUserId, peerConnection);
+        
+        await peerConnection.setRemoteDescription(offer);
+        console.log('✅ Offre distante définie pour:', fromUserId);
+        
+        // Créer la réponse
+        const answer = await peerConnection.createAnswer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+        });
+        
+        await peerConnection.setLocalDescription(answer);
+        console.log('✅ Réponse locale définie');
+        
+        // Attendre un peu avant d'envoyer
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        socket.emit('webrtc-answer', {
+            to: fromUserId,
+            answer: peerConnection.localDescription,
+            roomId: currentRoom
+        });
+        
+        console.log('✅ Réponse envoyée à:', fromUserId);
+        
+    } catch (error) {
+        console.error('❌ Erreur traitement offre:', error);
+        cleanupWebRTC(fromUserId);
+    }
+}
+
+async function handleWebRTCAnswer(fromUserId, answer) {
+    console.log('📨 Traitement réponse de:', fromUserId);
+    
+    try {
+        const peerConnection = peers.get(fromUserId);
+        if (!peerConnection) {
+            console.error('❌ Aucune PeerConnection pour:', fromUserId);
+            return;
+        }
+        
+        const currentState = peerConnection.signalingState;
+        console.log('📊 État signalisation avant réponse:', currentState);
+        
+        if (currentState !== 'stable') {
+            console.log('🔄 Attente de l\'état stable...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        await peerConnection.setRemoteDescription(answer);
+        console.log('✅ Réponse distante définie pour:', fromUserId);
+        
+        // Traiter les candidats ICE en attente
+        processQueuedIceCandidates(fromUserId, peerConnection);
+        
+    } catch (error) {
+        console.error('❌ Erreur traitement réponse:', error);
+        
+        // En cas d'erreur "stable", réessayer après un délai
+        if (error.toString().includes('stable')) {
+            console.log('🔄 Nouvelle tentative dans 1s...');
+            setTimeout(() => {
+                if (peers.has(fromUserId)) {
+                    handleWebRTCAnswer(fromUserId, answer);
+                }
+            }, 1000);
+        } else {
+            cleanupWebRTC(fromUserId);
+        }
+    }
+}
+
+async function handleWebRTCIceCandidate(fromUserId, candidate) {
+    try {
+        const peerConnection = peers.get(fromUserId);
+        
+        if (!peerConnection) {
+            // Mettre en file d'attente si la connexion n'est pas encore prête
+            if (!iceCandidateQueue.has(fromUserId)) {
+                iceCandidateQueue.set(fromUserId, []);
             }
-            
+            iceCandidateQueue.get(fromUserId).push(candidate);
+            console.log('📦 Candidat ICE mis en file d\'attente pour:', fromUserId);
+            return;
+        }
+        
+        if (!candidate) {
+            console.log('⚠️ Candidat ICE vide');
+            return;
+        }
+        
+        // Vérifier que la description distante est définie
+        if (!peerConnection.remoteDescription) {
+            if (!iceCandidateQueue.has(fromUserId)) {
+                iceCandidateQueue.set(fromUserId, []);
+            }
+            iceCandidateQueue.get(fromUserId).push(candidate);
+            console.log('📦 Candidat ICE en attente (description manquante)');
+            return;
+        }
+        
+        await peerConnection.addIceCandidate(candidate);
+        console.log('✅ Candidat ICE ajouté pour:', fromUserId);
+        
+    } catch (error) {
+        console.error('❌ Erreur candidat ICE:', error);
+        
+        // Ignorer certaines erreurs non critiques
+        if (error.toString().includes('Unknown ufrag')) {
+            console.log('⚠️ Candidat ICE ignoré (ufrag inconnu)');
+        }
+    }
+}
+
+function processQueuedIceCandidates(userId, peerConnection) {
+    if (iceCandidateQueue.has(userId)) {
+        const queue = iceCandidateQueue.get(userId);
+        console.log(`🔄 Traitement de ${queue.length} candidats ICE en attente...`);
+        
+        queue.forEach(async (candidate) => {
             try {
-                const peerConnection = new RTCPeerConnection(rtcConfiguration);
-                peers.set(fromUserId, peerConnection);
-                
-                if (localStream) {
-                    localStream.getTracks().forEach(track => {
-                        peerConnection.addTrack(track, localStream);
-                    });
-                }
-                
-                peerConnection.ontrack = (event) => {
-                    console.log('📹 Track distant reçu:', event.track.kind);
-                    if (event.streams && event.streams[0]) {
-                        addRemoteVideo(fromUserId, event.streams[0]);
-                    }
-                };
-                
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        socket.emit('webrtc-ice-candidate', {
-                            to: fromUserId,
-                            candidate: event.candidate,
-                            roomId: currentRoom
-                        });
-                    }
-                };
-                
-                await peerConnection.setRemoteDescription(offer);
-                console.log('✅ Offre distante définie pour:', fromUserId);
-
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                socket.emit('webrtc-answer', {
-                    to: fromUserId,
-                    answer: peerConnection.localDescription,
-                    roomId: currentRoom
-                });
-                
-                console.log('✅ Réponse envoyée à:', fromUserId);
-                
-            } catch (error) {
-                console.error('❌ Erreur traitement offre:', error);
-                cleanupWebRTC(fromUserId);
+                await peerConnection.addIceCandidate(candidate);
+                console.log('✅ Candidat en attente ajouté');
+            } catch (e) {
+                console.log('⚠️ Candidat en attente ignoré:', e.message);
             }
-        }
+        });
+        
+        iceCandidateQueue.delete(userId);
+    }
+}
 
-        async function handleWebRTCAnswer(fromUserId, answer) {
-            console.log('📨 Traitement réponse de:', fromUserId);
+function restartWebRTCConnection(userId) {
+    console.log('🔄 Redémarrage connexion WebRTC pour:', userId);
+    cleanupWebRTC(userId);
+    setTimeout(() => {
+        if (currentRoom && socket && socket.connected) {
+            startWebRTC(userId);
+        }
+    }, 2000);
+}
+
+function cleanupWebRTC(userId) {
+    console.log('🧹 Nettoyage WebRTC pour:', userId);
+    
+    const peerConnection = peers.get(userId);
+    if (peerConnection) {
+        try {
+            peerConnection.onicecandidate = null;
+            peerConnection.ontrack = null;
+            peerConnection.onconnectionstatechange = null;
+            peerConnection.oniceconnectionstatechange = null;
             
-            try {
-                const peerConnection = peers.get(fromUserId);
-                if (!peerConnection) {
-                    console.error('❌ Aucune PeerConnection pour:', fromUserId);
-                    return;
-                }
-                
-                await peerConnection.setRemoteDescription(answer);
-                console.log('✅ Réponse distante définie pour:', fromUserId);
-                
-            } catch (error) {
-                console.error('❌ Erreur traitement réponse:', error);
+            if (peerConnection.connectionState !== 'closed') {
+                peerConnection.close();
             }
+        } catch (e) {
+            console.log('⚠️ Erreur fermeture PeerConnection:', e.message);
         }
-
-        async function handleWebRTCIceCandidate(fromUserId, candidate) {
-            try {
-                const peerConnection = peers.get(fromUserId);
-                if (peerConnection && candidate) {
-                    await peerConnection.addIceCandidate(candidate);
-                    console.log('✅ Candidat ICE ajouté pour:', fromUserId);
-                }
-            } catch (error) {
-                console.error('❌ Erreur candidat ICE:', error);
-            }
-        }
-
-        function cleanupWebRTC(userId) {
-            console.log('🧹 Nettoyage WebRTC pour:', userId);
-            
-            const peerConnection = peers.get(userId);
-            if (peerConnection) {
-                try {
-                    peerConnection.close();
-                } catch (e) {
-                    console.log('⚠️ Erreur fermeture PeerConnection:', e.message);
-                }
-                peers.delete(userId);
-            }
-            
-            const remoteVideo = document.getElementById(`remoteVideo-${userId}`);
-            if (remoteVideo) {
-                remoteVideo.remove();
-            }
-        }
+        peers.delete(userId);
+    }
+    
+    iceCandidateQueue.delete(userId);
+    connectionAttempts.delete(userId);
+    
+    const remoteVideo = document.getElementById(`remoteVideo-${userId}`);
+    if (remoteVideo) {
+        remoteVideo.remove();
+    }
+}
 
         function addRemoteVideo(userId, remoteStream) {
             console.log('🎥 Ajout vidéo distante pour:', userId);
