@@ -2437,31 +2437,78 @@ async function createPeerConnection(targetUserId) {
 async function startWebRTC(targetUserId) {
     console.log('🚀 Démarrage WebRTC avec:', targetUserId);
     
-    const attempts = connectionAttempts.get(targetUserId) || 0;
-    if (attempts >= MAX_RETRIES) {
-        console.log('🛑 Maximum de tentatives atteint pour:', targetUserId);
-        return;
+    // Nettoyer toute connexion existante
+    if (peers.has(targetUserId)) {
+        cleanupWebRTC(targetUserId);
     }
-    connectionAttempts.set(targetUserId, attempts + 1);
     
     try {
-        const peerConnection = await createPeerConnection(targetUserId);
+        const peerConnection = new RTCPeerConnection(rtcConfiguration);
+        peers.set(targetUserId, peerConnection);
+        peerStates.set(targetUserId, 'initiating');
+        
+        // Ajouter les tracks locaux
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+        }
+        
+        // Gestion des tracks distants
+        peerConnection.ontrack = (event) => {
+            console.log('📹 Track distant reçu de:', targetUserId);
+            if (event.streams && event.streams[0]) {
+                addRemoteVideo(targetUserId, event.streams[0]);
+            }
+        };
+        
+        // Gestion des candidats ICE
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('webrtc-ice-candidate', {
+                    to: targetUserId,
+                    candidate: event.candidate,
+                    roomId: currentRoom
+                });
+            }
+        };
+        
+        // Surveillance de la connexion
+        peerConnection.onconnectionstatechange = () => {
+            const state = peerConnection.connectionState;
+            console.log(`🔗 État connexion ${targetUserId}: ${state}`);
+            
+            if (state === 'connected') {
+                console.log(`🎉 Connexion WebRTC établie avec ${targetUserId}`);
+                peerStates.set(targetUserId, 'connected');
+            } else if (state === 'failed') {
+                console.log(`❌ Échec connexion avec ${targetUserId}`);
+                setTimeout(() => {
+                    if (peers.has(targetUserId)) {
+                        restartWebRTCConnection(targetUserId);
+                    }
+                }, 3000);
+            }
+        };
         
         // Créer l'offre
+        console.log('🔧 Création de l\'offre...');
         const offer = await peerConnection.createOffer({
             offerToReceiveAudio: true,
             offerToReceiveVideo: true
         });
         
+        // Définir la description locale
+        console.log('🔧 Définition de l\'offre locale...');
         await peerConnection.setLocalDescription(offer);
         console.log('✅ Offre locale définie');
         
-        // Attendre un peu avant d'envoyer
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        peerStates.set(targetUserId, 'offered');
         
+        // Envoyer l'offre
         socket.emit('webrtc-offer', {
             to: targetUserId,
-            offer: peerConnection.localDescription,
+            offer: offer,
             roomId: currentRoom
         });
         
@@ -2476,32 +2523,62 @@ async function startWebRTC(targetUserId) {
 async function handleWebRTCOffer(fromUserId, offer) {
     console.log('📨 Traitement offre de:', fromUserId);
     
-    connectionAttempts.set(fromUserId, 0);
+    // Nettoyer toute connexion existante
+    if (peers.has(fromUserId)) {
+        cleanupWebRTC(fromUserId);
+    }
     
     try {
-        const peerConnection = await createPeerConnection(fromUserId);
+        const peerConnection = new RTCPeerConnection(rtcConfiguration);
+        peers.set(fromUserId, peerConnection);
+        peerStates.set(fromUserId, 'processing-offer');
         
-        // Traiter les candidats ICE en attente
-        processQueuedIceCandidates(fromUserId, peerConnection);
+        // Ajouter les tracks locaux
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+        }
         
+        // Gestion des tracks distants
+        peerConnection.ontrack = (event) => {
+            console.log('📹 Track distant reçu de:', fromUserId);
+            if (event.streams && event.streams[0]) {
+                addRemoteVideo(fromUserId, event.streams[0]);
+            }
+        };
+        
+        // Gestion des candidats ICE
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('webrtc-ice-candidate', {
+                    to: fromUserId,
+                    candidate: event.candidate,
+                    roomId: currentRoom
+                });
+            }
+        };
+        
+        // IMPORTANT: Définir d'abord la description distante
+        console.log('🔧 Définition de l\'offre distante...');
         await peerConnection.setRemoteDescription(offer);
-        console.log('✅ Offre distante définie pour:', fromUserId);
+        console.log('✅ Offre distante définie');
         
         // Créer la réponse
-        const answer = await peerConnection.createAnswer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true
-        });
+        console.log('🔧 Création de la réponse...');
+        const answer = await peerConnection.createAnswer();
         
+        // IMPORTANT: Définir la description locale AVANT d'envoyer
+        console.log('🔧 Définition de la réponse locale...');
         await peerConnection.setLocalDescription(answer);
         console.log('✅ Réponse locale définie');
         
-        // Attendre un peu avant d'envoyer
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        peerStates.set(fromUserId, 'answered');
         
+        // Envoyer la réponse
         socket.emit('webrtc-answer', {
             to: fromUserId,
-            answer: peerConnection.localDescription,
+            answer: answer,
             roomId: currentRoom
         });
         
@@ -2516,38 +2593,49 @@ async function handleWebRTCOffer(fromUserId, offer) {
 async function handleWebRTCAnswer(fromUserId, answer) {
     console.log('📨 Traitement réponse de:', fromUserId);
     
+    const peerConnection = peers.get(fromUserId);
+    if (!peerConnection) {
+        console.error('❌ Aucune PeerConnection pour:', fromUserId);
+        return;
+    }
+    
+    const currentState = peerConnection.signalingState;
+    console.log('📊 État signalisation:', currentState);
+    
     try {
-        const peerConnection = peers.get(fromUserId);
-        if (!peerConnection) {
-            console.error('❌ Aucune PeerConnection pour:', fromUserId);
-            return;
+        // Vérifier si nous sommes dans le bon état pour accepter la réponse
+        if (currentState === 'have-local-offer') {
+            console.log('🔧 Définition de la réponse distante...');
+            await peerConnection.setRemoteDescription(answer);
+            console.log('✅ Réponse distante définie');
+            peerStates.set(fromUserId, 'connected');
+        } else {
+            console.warn('⚠️ État inattendu:', currentState, '- Nettoyage et reconnexion...');
+            cleanupWebRTC(fromUserId);
+            // Réessayer la connexion
+            setTimeout(() => {
+                if (socket && socket.connected) {
+                    startWebRTC(fromUserId);
+                }
+            }, 2000);
         }
-        
-        const currentState = peerConnection.signalingState;
-        console.log('📊 État signalisation avant réponse:', currentState);
-        
-        if (currentState !== 'stable') {
-            console.log('🔄 Attente de l\'état stable...');
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-        await peerConnection.setRemoteDescription(answer);
-        console.log('✅ Réponse distante définie pour:', fromUserId);
-        
-        // Traiter les candidats ICE en attente
-        processQueuedIceCandidates(fromUserId, peerConnection);
-        
     } catch (error) {
         console.error('❌ Erreur traitement réponse:', error);
         
-        // En cas d'erreur "stable", réessayer après un délai
         if (error.toString().includes('stable')) {
-            console.log('🔄 Nouvelle tentative dans 1s...');
-            setTimeout(() => {
-                if (peers.has(fromUserId)) {
-                    handleWebRTCAnswer(fromUserId, answer);
-                }
-            }, 1000);
+            console.log('🔄 État stable détecté - connexion probablement déjà établie');
+            // Vérifier si la connexion est déjà établie
+            if (peerConnection.connectionState === 'connected') {
+                console.log('✅ Connexion déjà établie - ignore l\'erreur');
+            } else {
+                console.log('🔁 Reconnexion nécessaire...');
+                cleanupWebRTC(fromUserId);
+                setTimeout(() => {
+                    if (socket && socket.connected) {
+                        startWebRTC(fromUserId);
+                    }
+                }, 3000);
+            }
         } else {
             cleanupWebRTC(fromUserId);
         }
@@ -2559,40 +2647,19 @@ async function handleWebRTCIceCandidate(fromUserId, candidate) {
         const peerConnection = peers.get(fromUserId);
         
         if (!peerConnection) {
-            // Mettre en file d'attente si la connexion n'est pas encore prête
+            // Mettre en file d'attente
             if (!iceCandidateQueue.has(fromUserId)) {
                 iceCandidateQueue.set(fromUserId, []);
             }
             iceCandidateQueue.get(fromUserId).push(candidate);
-            console.log('📦 Candidat ICE mis en file d\'attente pour:', fromUserId);
             return;
         }
         
-        if (!candidate) {
-            console.log('⚠️ Candidat ICE vide');
-            return;
+        if (candidate && peerConnection.remoteDescription) {
+            await peerConnection.addIceCandidate(candidate);
         }
-        
-        // Vérifier que la description distante est définie
-        if (!peerConnection.remoteDescription) {
-            if (!iceCandidateQueue.has(fromUserId)) {
-                iceCandidateQueue.set(fromUserId, []);
-            }
-            iceCandidateQueue.get(fromUserId).push(candidate);
-            console.log('📦 Candidat ICE en attente (description manquante)');
-            return;
-        }
-        
-        await peerConnection.addIceCandidate(candidate);
-        console.log('✅ Candidat ICE ajouté pour:', fromUserId);
-        
     } catch (error) {
-        console.error('❌ Erreur candidat ICE:', error);
-        
-        // Ignorer certaines erreurs non critiques
-        if (error.toString().includes('Unknown ufrag')) {
-            console.log('⚠️ Candidat ICE ignoré (ufrag inconnu)');
-        }
+        console.log('⚠️ Candidat ICE ignoré:', error.message);
     }
 }
 
@@ -2630,23 +2697,26 @@ function cleanupWebRTC(userId) {
     const peerConnection = peers.get(userId);
     if (peerConnection) {
         try {
+            // Désactiver tous les gestionnaires d'événements
             peerConnection.onicecandidate = null;
             peerConnection.ontrack = null;
             peerConnection.onconnectionstatechange = null;
             peerConnection.oniceconnectionstatechange = null;
+            peerConnection.onsignalingstatechange = null;
             
-            if (peerConnection.connectionState !== 'closed') {
-                peerConnection.close();
-            }
+            // Fermer la connexion
+            peerConnection.close();
         } catch (e) {
-            console.log('⚠️ Erreur fermeture PeerConnection:', e.message);
+            console.log('⚠️ Erreur lors du nettoyage:', e.message);
         }
-        peers.delete(userId);
     }
     
+    // Nettoyer les maps
+    peers.delete(userId);
+    peerStates.delete(userId);
     iceCandidateQueue.delete(userId);
-    connectionAttempts.delete(userId);
     
+    // Supprimer l'élément vidéo
     const remoteVideo = document.getElementById(`remoteVideo-${userId}`);
     if (remoteVideo) {
         remoteVideo.remove();
